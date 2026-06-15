@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdminBiz · Portal Akademik Administrasi Bisnis</title>
+  <meta name="description" content="Portal kuis dan pembelajaran interaktif untuk mahasiswa Administrasi Bisnis PNUP">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg-grid"></div>
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<!-- Mobile Toggle -->
+<button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">
+      <div class="logo-icon">🎓</div>
+      <div>
+        <div>AdminBiz</div>
+      </div>
+    </div>
+    <div class="sidebar-tagline">Portal Akademik D4 Administrasi Bisnis</div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Menu Utama</div>
+    <a class="nav-item active" data-page="dashboard">
+      <span class="nav-icon">🏠</span> Dashboard
+    </a>
+    <a class="nav-item" data-page="kuis">
+      <span class="nav-icon">📝</span> Kuis
+      <span class="nav-badge">10</span>
+    </a>
+    <a class="nav-item" data-page="nilai">
+      <span class="nav-icon">📊</span> Nilai Saya
+    </a>
+    <a class="nav-item" data-page="leaderboard">
+      <span class="nav-icon">🏆</span> Leaderboard
+    </a>
+
+    <div class="nav-section-label">Pembelajaran</div>
+    <a class="nav-item" data-page="materi">
+      <span class="nav-icon">📚</span> Materi
+    </a>
+    <a class="nav-item" data-page="profil">
+      <span class="nav-icon">👤</span> Profil
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar"><span class="user-initial">M</span></div>
+      <div class="user-info">
+        <div class="user-name user-display-name">Mahasiswa</div>
+        <div class="user-role">D4 Administrasi Bisnis</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div>
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-sub" id="topbar-sub">Selamat datang kembali 👋</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-icon" onclick="navigate('kuis')" title="Mulai Kuis">🎯</button>
+      <button class="btn-icon" onclick="navigate('nilai')" title="Lihat Nilai">📊</button>
+    </div>
+  </header>
+
+  <!-- ========== PAGE: DASHBOARD ========== -->
+  <div class="page active" id="page-dashboard">
+
+    <!-- Hero -->
+    <section class="hero-section">
+      <div class="hero-bg"></div>
+      <div class="hero-tag">
+        <div class="hero-tag-dot"></div>
+        Portal Akademik Aktif
+      </div>
+      <h1 class="hero-heading">
+        Belajar Lebih <span class="gradient-text">Cerdas</span>,<br>
+        Raih <span class="gradient-text-gold">Prestasi</span> Lebih Tinggi
+      </h1>
+      <p class="hero-sub">
+        Platform kuis interaktif untuk mahasiswa D4 Administrasi Bisnis. 
+        10 mata kuliah, ratusan soal, dan analitik nilai yang lengkap.
+      </p>
+      <div id="sheets-status" style="margin-bottom:16px;padding:10px 16px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;font-size:13px;">⏳ Memeriksa koneksi Google Sheets...</div>
+        <div class="hero-actions">
+        <button class="btn btn-primary btn-lg" onclick="navigate('kuis')">
+          🎯 Mulai Kuis Sekarang
+        </button>
+        <button class="btn btn-secondary btn-lg" onclick="navigate('materi')">
+          📚 Lihat Materi
+        </button>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item">
+          <div class="stat-value gradient-text">10</div>
+          <div class="stat-label">Mata Kuliah</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value gradient-text">100</div>
+          <div class="stat-label">Total Soal</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value gradient-text">∞</div>
+          <div class="stat-label">Percobaan</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value gradient-text">100%</div>
+          <div class="stat-label">Gratis</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats Cards -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-eyebrow">Statistik Kamu</div>
+        <div class="section-title">Ringkasan Performa</div>
+      </div>
+      <div class="stats-grid stagger">
+        <div class="stat-card">
+          <span class="stat-card-icon">📝</span>
+          <div class="stat-card-value" id="dash-total">0</div>
+          <div class="stat-card-label">Total Kuis Dikerjakan</div>
+          <div class="stat-card-trend">↑ Semangat terus!</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card-icon">📈</span>
+          <div class="stat-card-value" id="dash-avg">0%</div>
+          <div class="stat-card-label">Rata-rata Nilai</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card-icon">🏆</span>
+          <div class="stat-card-value" id="dash-best">0%</div>
+          <div class="stat-card-label">Nilai Tertinggi</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card-icon">✅</span>
+          <div class="stat-card-value" id="dash-passed">0</div>
+          <div class="stat-card-label">Kuis Lulus (≥70%)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Two columns: recent + progress -->
+    <section class="section" style="padding-top:0;">
+      <div style="display:grid; grid-template-columns:1fr 360px; gap:24px;">
+        <!-- Recent Activity -->
+        <div>
+          <div class="section-header">
+            <div class="section-eyebrow">Aktivitas</div>
+            <div class="section-title">Kuis Terakhir</div>
+          </div>
+          <div class="leaderboard-table">
+            <div class="lb-header">
+              <div></div>
+              <div>Mata Kuliah</div>
+              <div>Benar/Total</div>
+              <div>Nilai</div>
+              <div>Waktu</div>
+            </div>
+            <div id="recent-activity">
+              <div class="empty-state" style="padding:40px;">
+                <div class="empty-state-icon">📝</div>
+                <div class="empty-state-title">Belum ada aktivitas</div>
+                <div class="empty-state-text">Mulai kerjakan kuis</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subject Progress -->
+        <div>
+          <div class="section-header">
+            <div class="section-eyebrow">Progress</div>
+            <div class="section-title">Per Mata Kuliah</div>
+          </div>
+          <div class="card">
+            <div class="card-body" id="subject-progress">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Access -->
+    <section class="section" style="padding-top:0;">
+      <div class="section-header">
+        <div class="section-eyebrow">Akses Cepat</div>
+        <div class="section-title">Kuis Populer</div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px;" class="stagger">
+        <div class="subject-card" onclick="startQuiz('mpi')" style="padding:20px; text-align:center;">
+          <div style="font-size:32px; margin-bottom:10px;">📈</div>
+          <div style="font-size:12px; font-weight:600; line-height:1.4">MPI</div>
+        </div>
+        <div class="subject-card" onclick="startQuiz('pk')" style="padding:20px; text-align:center;">
+          <div style="font-size:32px; margin-bottom:10px;">🛍️</div>
+          <div style="font-size:12px; font-weight:600; line-height:1.4">Perilaku Konsumen</div>
+        </div>
+        <div class="subject-card" onclick="startQuiz('sim')" style="padding:20px; text-align:center;">
+          <div style="font-size:32px; margin-bottom:10px;">🖥️</div>
+          <div style="font-size:12px; font-weight:600; line-height:1.4">SIM</div>
+        </div>
+        <div class="subject-card" onclick="startQuiz('akb')" style="padding:20px; text-align:center;">
+          <div style="font-size:32px; margin-bottom:10px;">💻</div>
+          <div style="font-size:12px; font-weight:600; line-height:1.4">Aplikasi Komputer</div>
+        </div>
+        <div class="subject-card" onclick="startQuiz('sb')" style="padding:20px; text-align:center;">
+          <div style="font-size:32px; margin-bottom:10px;">🎯</div>
+          <div style="font-size:12px; font-weight:600; line-height:1.4">Simulasi Bisnis</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== PAGE: KUIS ========== -->
+  <div class="page" id="page-kuis">
+    <section class="section">
+      <div class="section-header">
+        <div class="section-eyebrow">Pilih Mata Kuliah</div>
+        <h2 class="section-title">Semua Kuis Tersedia</h2>
+        <p class="section-sub">Pilih salah satu mata kuliah di bawah untuk memulai kuis. Setiap kuis berisi 10 soal dengan waktu 10 menit.</p>
+      </div>
+      <div class="subjects-grid stagger" id="subjects-grid">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== PAGE: QUIZ (in progress) ========== -->
+  <div class="page" id="page-quiz">
+    <div class="quiz-container" id="quiz-container-inner">
+      <!-- Header -->
+      <div class="quiz-header">
+        <div class="quiz-progress-wrap">
+          <div>
+            <div class="section-eyebrow" id="question-subject">Kuis</div>
+          </div>
+          <div class="quiz-timer">
+            ⏱️ <span id="quiz-timer-text">10:00</span>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-bottom:8px;">
+          <span id="quiz-progress-text">1 / 10</span>
+          <span>Progress</span>
+        </div>
+        <div class="quiz-progress-bar">
+          <div class="quiz-progress-fill" id="quiz-progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Question Card -->
+      <div class="question-card fade-in">
+        <div class="question-number" id="question-number">Pertanyaan 1</div>
+        <div class="question-text" id="question-text"></div>
+        <div class="options-grid" id="options-container"></div>
+      </div>
+
+      <!-- Nav -->
+      <div class="quiz-actions">
+        <button class="btn btn-ghost" id="btn-prev" onclick="prevQuestion()" style="display:none;">← Sebelumnya</button>
+        <div style="margin-left:auto; display:flex; gap:10px;">
+          <button class="btn btn-ghost" onclick="if(confirm('Yakin ingin mengakhiri kuis?')) finishQuiz()">Akhiri Kuis</button>
+          <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()" disabled>Selanjutnya →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: RESULT ========== -->
+  <div class="page" id="page-result">
+    <div class="quiz-container" style="padding-top:48px;">
+      <div class="result-card fade-in">
+        <!-- Ring -->
+        <div class="result-score-ring">
+          <svg width="160" height="160" viewBox="0 0 160 160" id="result-ring-svg"></svg>
+          <div class="result-score-text">
+            <div class="result-score-num" id="result-score-num">0%</div>
+            <div class="result-score-label" id="result-grade-text">Grade</div>
+          </div>
+        </div>
+
+        <h2 class="result-title" id="result-title">Selesai!</h2>
+        <p class="result-subtitle" id="result-subtitle">Kuis telah selesai.</p>
+
+        <div class="result-stats">
+          <div class="result-stat">
+            <div class="result-stat-value" style="color:#10B981" id="result-correct">0</div>
+            <div class="result-stat-label">✅ Benar</div>
+          </div>
+          <div class="result-stat">
+            <div class="result-stat-value" style="color:#EF4444" id="result-wrong">0</div>
+            <div class="result-stat-label">❌ Salah</div>
+          </div>
+          <div class="result-stat">
+            <div class="result-stat-value" style="color:#F59E0B" id="result-time">0m</div>
+            <div class="result-stat-label">⏱️ Waktu</div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+          <button class="btn btn-primary btn-lg" onclick="if(STATE.currentSubject) startQuiz(STATE.currentSubject.id)">
+            🔄 Coba Lagi
+          </button>
+          <button class="btn btn-secondary btn-lg" onclick="navigate('nilai')">
+            📊 Lihat Nilai
+          </button>
+          <button class="btn btn-ghost btn-lg" onclick="navigate('kuis')">
+            ← Kuis Lain
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: NILAI ========== -->
+  <div class="page" id="page-nilai">
+    <section class="section">
+      <div class="section-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+        <div>
+          <div class="section-eyebrow">Riwayat</div>
+          <h2 class="section-title">Nilai Saya</h2>
+          <p class="section-sub">Rekap nilai terbaik dan semua percobaan kuis</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="clearHistory()">🗑️ Hapus Riwayat</button>
+      </div>
+      <div id="nilai-content">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== PAGE: LEADERBOARD ========== -->
+  <div class="page" id="page-leaderboard">
+    <section class="section">
+      <div class="section-header">
+        <div class="section-eyebrow">Peringkat</div>
+        <h2 class="section-title">🏆 Leaderboard</h2>
+        <p class="section-sub">Nilai terbaik kamu untuk setiap mata kuliah</p>
+      </div>
+      <div id="lb-content">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== PAGE: MATERI ========== -->
+  <div class="page" id="page-materi">
+    <section class="section">
+      <div class="section-header">
+        <div class="section-eyebrow">Pembelajaran</div>
+        <h2 class="section-title">Materi Pembelajaran</h2>
+        <p class="section-sub">Ringkasan topik utama setiap mata kuliah. Pelajari sebelum mengerjakan kuis!</p>
+      </div>
+      <div class="materi-grid" id="materi-grid">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== PAGE: PROFIL ========== -->
+  <div class="page" id="page-profil">
+    <section class="section">
+      <div class="section-header">
+        <div class="section-eyebrow">Akun</div>
+        <h2 class="section-title">Profil Saya</h2>
+      </div>
+
+      <div class="profile-grid">
+        <!-- Left: Profile Card -->
+        <div>
+          <div class="card profile-sidebar-card mb-16">
+            <div class="profile-avatar-lg"><span class="prof-initial">M</span></div>
+            <div id="prof-name" style="font-size:20px; font-weight:800; margin-bottom:4px;">Mahasiswa</div>
+            <div id="prof-nim" style="font-size:13px; color:var(--text-muted); margin-bottom:4px;">NIM: -</div>
+            <div id="prof-prodi" style="font-size:12px; color:var(--text-muted);">D4 Administrasi Bisnis</div>
+            <div class="profile-badges">
+              <span class="badge">PNUP</span>
+              <span class="badge">2024</span>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="card">
+            <div class="card-body">
+              <div class="section-eyebrow" style="margin-bottom:16px;">Statistik Kuis</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div style="text-align:center; padding:16px; background:var(--bg-glass); border-radius:10px; border:1px solid var(--border-subtle);">
+                  <div style="font-size:24px; font-weight:800; color:var(--accent-indigo)" id="prof-total">0</div>
+                  <div style="font-size:11px; color:var(--text-muted);">Total Kuis</div>
+                </div>
+                <div style="text-align:center; padding:16px; background:var(--bg-glass); border-radius:10px; border:1px solid var(--border-subtle);">
+                  <div style="font-size:24px; font-weight:800; color:var(--accent-emerald)" id="prof-passed">0</div>
+                  <div style="font-size:11px; color:var(--text-muted);">Lulus</div>
+                </div>
+                <div style="text-align:center; padding:16px; background:var(--bg-glass); border-radius:10px; border:1px solid var(--border-subtle);">
+                  <div style="font-size:24px; font-weight:800; color:var(--accent-amber)" id="prof-avg">0%</div>
+                  <div style="font-size:11px; color:var(--text-muted);">Rata-rata</div>
+                </div>
+                <div style="text-align:center; padding:16px; background:var(--bg-glass); border-radius:10px; border:1px solid var(--border-subtle);">
+                  <div style="font-size:24px; font-weight:800; color:#EF4444" id="prof-best">0%</div>
+                  <div style="font-size:11px; color:var(--text-muted);">Terbaik</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Edit Form -->
+        <div>
+          <div class="card mb-16">
+            <div class="card-body">
+              <div class="section-eyebrow" style="margin-bottom:20px;">Edit Profil</div>
+              <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px; letter-spacing:0.5px; text-transform:uppercase;">Nama Lengkap</label>
+                <input id="input-name" type="text" placeholder="Masukkan nama lengkap..."
+                  style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:14px; outline:none; transition:border-color 0.2s;"
+                  onfocus="this.style.borderColor='var(--accent-indigo)'" onblur="this.style.borderColor='var(--border-subtle)'">
+              </div>
+              <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px; letter-spacing:0.5px; text-transform:uppercase;">NIM</label>
+                <input id="input-nim" type="text" placeholder="Masukkan NIM..."
+                  style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:14px; outline:none; transition:border-color 0.2s;"
+                  onfocus="this.style.borderColor='var(--accent-indigo)'" onblur="this.style.borderColor='var(--border-subtle)'">
+              </div>
+              <div style="margin-bottom:24px;">
+                <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px; letter-spacing:0.5px; text-transform:uppercase;">Program Studi</label>
+                <input id="input-prodi" type="text" value="D4 Administrasi Bisnis" placeholder="Program studi..."
+                  style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-primary); font-size:14px; outline:none; transition:border-color 0.2s;"
+                  onfocus="this.style.borderColor='var(--accent-indigo)'" onblur="this.style.borderColor='var(--border-subtle)'">
+              </div>
+              <button class="btn btn-primary" onclick="saveProfile()" style="width:100%; justify-content:center;">
+                💾 Simpan Perubahan
+              </button>
+            </div>
+          </div>
+
+          <!-- Info Card -->
+          <div class="card" style="border-color:rgba(99,102,241,0.2); background:rgba(99,102,241,0.05);">
+            <div class="card-body">
+              <div class="section-eyebrow" style="color:var(--accent-indigo); margin-bottom:12px;">ℹ️ Info Portal</div>
+              <div style="font-size:13px; color:var(--text-secondary); line-height:1.7;">
+                <p>Portal ini dirancang untuk mahasiswa <strong style="color:var(--text-primary)">D4 Administrasi Bisnis PNUP</strong>.</p>
+                <br>
+                <p>✨ <strong>Fitur Tersedia:</strong></p>
+                <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                  <span>📝 10 Kuis Mata Kuliah (100 soal)</span>
+                  <span>⏱️ Timer otomatis 10 menit</span>
+                  <span>📊 Analitik nilai & progress</span>
+                  <span>🏆 Leaderboard personal</span>
+                  <span>📚 Ringkasan materi</span>
+                  <span>💾 Data tersimpan otomatis</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+</div><!-- end main-content -->
+
+<!-- Scripts -->
+
+<script src="data/config.js"></script>
+<script src="js/sheets-loader.js"></script>
+<script src="js/app-sheets.js"></script>
+
+</body>
+</html>
