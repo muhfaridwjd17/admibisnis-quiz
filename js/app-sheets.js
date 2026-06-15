@@ -4,7 +4,7 @@
 // ================================================
 
 // ⚠️ GANTI dengan URL Apps Script kamu setelah deploy
-const APPS_SCRIPT_URL = "";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwN-BwVKBlD17Q3lpdbo1u4y6VsV-lSA_gKD9NBGBhOAtCZzurTNBGg1Ps_OgqhCYNO/exec";
 
 const STATE = {
   currentPage: 'dashboard',
