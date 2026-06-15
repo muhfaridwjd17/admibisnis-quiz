@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwN-BwVKBlD17Q3lpdbo1u4y6VsV-lSA_gKD9NBGBhOAtCZzurTNBGg1Ps_OgqhCYNO/exec";
+const APPS_SCRIPT_URL = "";
 
 const STATE = {
   currentPage: 'dashboard',
@@ -60,10 +60,10 @@ function showModalIdentitas(subjectId) {
   STATE._pendingSubjectId = subjectId;
   document.getElementById('modal-subject-icon').textContent = sub.icon;
   document.getElementById('modal-subject-title').textContent = sub.title;
-  const saved = JSON.parse(localStorage.getItem('user_identity')||'{}');
-  if (saved.nama) document.getElementById('id-nama').value = saved.nama;
-  if (saved.nim) document.getElementById('id-nim').value = saved.nim;
-  if (saved.kelas) document.getElementById('id-kelas').value = saved.kelas;
+  // Selalu kosongkan form agar setiap peserta mengisi ulang
+  document.getElementById('id-nama').value = '';
+  document.getElementById('id-nim').value = '';
+  document.getElementById('id-kelas').value = '';
   document.getElementById('modal-identitas').style.display = 'flex';
   setTimeout(()=>document.getElementById('id-nama').focus(),100);
 }
@@ -152,6 +152,7 @@ function updateTimerDisplay() {
   if(fill){fill.style.width=pct+'%';fill.className='soal-timer-fill';if(pct<50)fill.classList.add('warn');if(pct<20)fill.classList.add('danger');}
 }
 function autoNextSoal() {
+  STATE.totalSoalTime = (STATE.totalSoalTime || 0) + 120;
   showToast('⏰ Waktu habis! Lanjut ke soal berikutnya.','warning');
   const qIdx=STATE.currentQuestion;
   if(STATE.answers[qIdx]===null) STATE.answers[qIdx]=-1;
@@ -180,6 +181,8 @@ function renderQuestion() {
   startSoalTimer();
 }
 function selectOption(optIdx) {
+  const timeUsedThisSoal = 120 - STATE.soalTimeLeft;
+  STATE.totalSoalTime = (STATE.totalSoalTime || 0) + timeUsedThisSoal;
   stopSoalTimer();
   const qIdx=STATE.currentQuestion, q=STATE.currentSubject.questions[qIdx];
   STATE.answers[qIdx]=optIdx;
@@ -196,7 +199,10 @@ function finishQuiz() {
   const correct=sub.questions.filter((q,i)=>STATE.answers[i]===q.answer).length;
   const total=sub.questions.length, score=Math.round((correct/total)*100);
   const identity=STATE.currentIdentity||{nama:'Mahasiswa',nim:'-',kelas:'-'};
-  const record={subjectId:sub.id,subjectTitle:sub.title,score,correct,total,nama:identity.nama,nim:identity.nim,kelas:identity.kelas,date:new Date().toISOString()};
+  const totalSecs = STATE.totalSoalTime || Math.round((Date.now() - (STATE.quizStartTime||Date.now()))/1000);
+  const mm = Math.floor(totalSecs/60), ss = totalSecs%60;
+  const timeStr = `${mm}m ${ss}s`;
+  const record={subjectId:sub.id,subjectTitle:sub.title,score,correct,total,nama:identity.nama,nim:identity.nim,kelas:identity.kelas,timeStr,date:new Date().toISOString()};
   STATE.history.push(record);
   localStorage.setItem('quiz_history',JSON.stringify(STATE.history));
   kirimHasilKeSheets(record);
@@ -207,27 +213,88 @@ function finishQuiz() {
 function renderResult(correct,total,score,identity) {
   const wrong=total-correct, grade=getGrade(score);
   updateTopbar('Hasil Kuis',STATE.currentSubject.title);
-  const radius=60,cx=80,cy=80,circ=2*Math.PI*radius,dash=(score/100)*circ;
-  const svg=document.getElementById('result-ring-svg');
-  if(svg)svg.innerHTML=`<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="rgba(128,128,128,0.15)" stroke-width="10"/><circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${grade.color}" stroke-width="10" stroke-dasharray="${circ}" stroke-dashoffset="${circ-dash}" stroke-linecap="round" style="transition:stroke-dashoffset 1.5s ease;"/>`;
-  const g=id=>document.getElementById(id);
-  if(g('result-score-num')){g('result-score-num').textContent=score+'%';g('result-score-num').style.color=grade.color;}
-  if(g('result-grade-text')){g('result-grade-text').textContent=grade.label;g('result-grade-text').style.color=grade.color;}
-  if(g('result-title'))g('result-title').textContent=grade.message;
-  if(g('result-subtitle'))g('result-subtitle').textContent=grade.sub;
-  if(g('result-correct'))g('result-correct').textContent=correct;
-  if(g('result-wrong'))g('result-wrong').textContent=wrong;
-  if(g('result-time'))g('result-time').textContent='-';
-  if(g('result-identity'))g('result-identity').innerHTML=`<div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;"><span>👤 <strong>${identity.nama}</strong></span><span>🎓 NIM: <strong>${identity.nim}</strong></span><span>🏫 Kelas: <strong>${identity.kelas}</strong></span></div>`;
+  const rec=STATE.history[STATE.history.length-1];
+  const timeStr=rec&&rec.timeStr?rec.timeStr:'-';
+
+  const resultPage=document.querySelector('#page-result .quiz-container');
+  if(!resultPage)return;
+
+  const radius=72,cx=90,cy=90,circ=2*Math.PI*radius,dash=(score/100)*circ;
+
+  resultPage.innerHTML=`
+    <div class="result-card-v2 fade-in" style="--result-accent:${grade.color};">
+      <div class="result-ring-wrap">
+        <svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="rgba(128,128,128,0.12)" stroke-width="12"/>
+          <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${grade.color}" stroke-width="12"
+            stroke-dasharray="${circ}" stroke-dashoffset="${circ}" stroke-linecap="round"
+            style="transition:stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1);"
+            id="result-ring-circle"/>
+        </svg>
+        <div class="result-ring-inner">
+          <div class="result-score-big" style="color:${grade.color};">${score}%</div>
+          <div class="result-grade-badge" style="color:${grade.color};background:${grade.color}18;">Grade ${grade.label}</div>
+        </div>
+      </div>
+
+      <span class="result-emoji">${grade.emoji}</span>
+      <div class="result-main-title">${grade.message}</div>
+      <div class="result-main-sub">${grade.sub}</div>
+
+      <div class="result-identity-bar">
+        <span>👤 <strong>${identity.nama}</strong></span>
+        <span style="color:var(--border-glass);">|</span>
+        <span>🎓 NIM: <strong>${identity.nim}</strong></span>
+        <span style="color:var(--border-glass);">|</span>
+        <span>🏫 Kelas: <strong>${identity.kelas}</strong></span>
+      </div>
+
+      <div class="result-stats-v2">
+        <div class="result-stat-v2">
+          <span class="result-stat-icon">✅</span>
+          <div class="result-stat-num" style="color:#10B981;">${correct}</div>
+          <div class="result-stat-lbl">Benar</div>
+        </div>
+        <div class="result-stat-v2">
+          <span class="result-stat-icon">❌</span>
+          <div class="result-stat-num" style="color:#EF4444;">${wrong}</div>
+          <div class="result-stat-lbl">Salah</div>
+        </div>
+        <div class="result-stat-v2">
+          <span class="result-stat-icon">⏱️</span>
+          <div class="result-stat-num" style="color:#F59E0B;font-size:20px;">${timeStr}</div>
+          <div class="result-stat-lbl">Total Waktu</div>
+        </div>
+      </div>
+
+      <div class="result-actions">
+        <button class="btn btn-primary btn-lg" onclick="if(STATE.currentSubject) showModalIdentitas(STATE.currentSubject.id)">
+          🔄 Coba Lagi
+        </button>
+        <button class="btn btn-secondary btn-lg" onclick="navigate('nilai')">
+          📊 Lihat Nilai
+        </button>
+        <button class="btn btn-ghost btn-lg" onclick="navigate('kuis')">
+          ← Kuis Lain
+        </button>
+      </div>
+    </div>`;
+
+  // Animasi ring setelah render
+  setTimeout(()=>{
+    const circle=document.getElementById('result-ring-circle');
+    if(circle) circle.style.strokeDashoffset=circ-dash;
+  },100);
+
   if(APPS_SCRIPT_URL)showToast('📊 Nilai terkirim ke Google Sheets!','success');
 }
 
 function getGrade(score) {
-  if(score>=90)return{label:'A',color:'#10B981',bg:'rgba(16,185,129,0.15)',message:'🏆 Sempurna!',sub:'Hasil luar biasa! Kamu menguasai materi ini dengan sangat baik.'};
-  if(score>=80)return{label:'B',color:'#6366F1',bg:'rgba(99,102,241,0.15)',message:'🎯 Hebat!',sub:'Hasil sangat bagus! Terus tingkatkan untuk mencapai kesempurnaan.'};
-  if(score>=70)return{label:'C',color:'#F59E0B',bg:'rgba(245,158,11,0.15)',message:'👍 Cukup Baik',sub:'Kamu lulus! Tetap semangat belajar untuk hasil yang lebih baik.'};
-  if(score>=60)return{label:'D',color:'#F97316',bg:'rgba(249,115,22,0.15)',message:'📚 Perlu Belajar Lagi',sub:'Hampir lulus. Pelajari kembali materi yang kurang dikuasai.'};
-  return{label:'E',color:'#EF4444',bg:'rgba(239,68,68,0.15)',message:'💪 Jangan Menyerah!',sub:'Hasil di bawah target. Review materi dan coba lagi ya!'};
+  if(score>=90)return{label:'A',color:'#10B981',bg:'rgba(16,185,129,0.15)',emoji:'🏆',message:'Sempurna!',sub:'Luar biasa! Kamu menguasai materi ini dengan sangat baik. Pertahankan terus!'};
+  if(score>=80)return{label:'B',color:'#6366F1',bg:'rgba(99,102,241,0.15)',emoji:'🎯',message:'Hebat Sekali!',sub:'Hasil yang sangat bagus! Sedikit lagi menuju nilai sempurna.'};
+  if(score>=70)return{label:'C',color:'#F59E0B',bg:'rgba(245,158,11,0.15)',emoji:'👍',message:'Cukup Baik!',sub:'Kamu lulus! Tetap semangat belajar untuk hasil yang lebih baik lagi.'};
+  if(score>=60)return{label:'D',color:'#F97316',bg:'rgba(249,115,22,0.15)',emoji:'📚',message:'Perlu Belajar Lagi',sub:'Hampir lulus. Pelajari kembali materi yang masih kurang dikuasai.'};
+  return{label:'E',color:'#EF4444',bg:'rgba(239,68,68,0.15)',emoji:'💪',message:'Jangan Menyerah!',sub:'Hasil di bawah target. Review materi dan coba lagi, kamu pasti bisa!'};
 }
 
 // ==================== DASHBOARD ====================
@@ -271,42 +338,38 @@ function renderKuisPage() {
 
 // ==================== NILAI PAGE ====================
 function renderNilaiPage() {
-  updateTopbar('Nilai Saya','Filter dan cari hasil kuis kamu');
+  updateTopbar('Nilai Saya','Riwayat dan rekap hasil kuis kamu');
   const container=document.getElementById('nilai-content');if(!container)return;
-
   const subjectOptions=Object.entries(SHEETS_CONFIG).map(([id,sub])=>`<option value="${id}">${sub.icon} ${sub.title}</option>`).join('');
-
   container.innerHTML=`
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label class="filter-label">📚 Mata Kuliah</label>
-        <select class="filter-select" id="nilai-subject-filter" onchange="applyNilaiFilter()">
-          <option value="all">Semua Mata Kuliah</option>
-          ${subjectOptions}
-        </select>
-      </div>
-      <div class="filter-group" style="flex:1;">
-        <label class="filter-label">🔍 Pencarian</label>
-        <div style="display:flex;gap:8px;">
-          <input type="text" class="filter-input" id="nilai-search" placeholder="Cari nama, NIM, atau kelas..." onkeydown="if(event.key==='Enter')applyNilaiFilter()">
-          <button class="btn-filter" onclick="applyNilaiFilter()">Filter</button>
-          <button class="btn-filter-clear" onclick="clearNilaiFilter()">Reset</button>
+    <div style="background:var(--bg-glass);border:1px solid var(--border-subtle);border-radius:16px;padding:20px 24px;margin-bottom:24px;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);">📚 Mata Kuliah</label>
+          <select id="nilai-subject-filter" onchange="applyNilaiFilter()" style="padding:10px 14px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-primary);font-size:13px;font-family:inherit;cursor:pointer;outline:none;min-width:240px;">
+            <option value="all">— Semua Mata Kuliah —</option>
+            ${subjectOptions}
+          </select>
+        </div>
+        <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);">🔍 Cari</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="nilai-search" placeholder="Cari nama, NIM, atau kelas..." onkeydown="if(event.key===\'Enter\')applyNilaiFilter()" style="flex:1;padding:10px 14px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;">
+            <button onclick="applyNilaiFilter()" style="padding:10px 20px;background:linear-gradient(135deg,#6366F1,#8B5CF6);border:none;border-radius:10px;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">🔍 Filter</button>
+            <button onclick="clearNilaiFilter()" style="padding:10px 16px;background:var(--bg-glass);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">✕ Reset</button>
+          </div>
         </div>
       </div>
-      <div class="filter-group">
-        <label class="filter-label">📤 Export</label>
-        <div style="display:flex;gap:8px;">
-          <button class="btn-export excel" onclick="exportNilaiExcel()">📊 Excel</button>
-          <button class="btn-export pdf" onclick="exportNilaiPDF()">📄 PDF</button>
-          <button class="btn-export print" onclick="printNilai()">🖨️ Print</button>
-        </div>
+      <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border-subtle);flex-wrap:wrap;align-items:center;">
+        <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-right:4px;">📤 Export:</span>
+        <button onclick="exportNilaiExcel()" style="padding:8px 16px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:8px;color:#10B981;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📊 Excel</button>
+        <button onclick="exportNilaiPDF()" style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;color:#EF4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📄 PDF</button>
+        <button onclick="printNilai()" style="padding:8px 16px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:8px;color:#6366F1;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🖨️ Print</button>
       </div>
     </div>
     <div id="nilai-table-wrap"></div>`;
-
-  // Set dropdown ke state tersimpan
-  document.getElementById('nilai-subject-filter').value = STATE.nilaiFilter.subject;
-  document.getElementById('nilai-search').value = STATE.nilaiFilter.search;
+  document.getElementById('nilai-subject-filter').value=STATE.nilaiFilter.subject;
+  document.getElementById('nilai-search').value=STATE.nilaiFilter.search;
   applyNilaiFilter();
 }
 
@@ -381,39 +444,36 @@ function renderNilaiTable() {
 
 // ==================== LEADERBOARD PAGE ====================
 function renderLeaderboard() {
-  updateTopbar('Leaderboard','Filter dan cari peringkat kuis');
+  updateTopbar('Leaderboard','Peringkat nilai terbaik semua peserta kuis');
   const container=document.getElementById('lb-content');if(!container)return;
-
   const subjectOptions=Object.entries(SHEETS_CONFIG).map(([id,sub])=>`<option value="${id}">${sub.icon} ${sub.title}</option>`).join('');
-
   container.innerHTML=`
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label class="filter-label">📚 Mata Kuliah</label>
-        <select class="filter-select" id="lb-subject-filter" onchange="applyLbFilter()">
-          <option value="all">Semua Mata Kuliah</option>
-          ${subjectOptions}
-        </select>
-      </div>
-      <div class="filter-group" style="flex:1;">
-        <label class="filter-label">🔍 Pencarian</label>
-        <div style="display:flex;gap:8px;">
-          <input type="text" class="filter-input" id="lb-search" placeholder="Cari nama, NIM, atau kelas..." onkeydown="if(event.key==='Enter')applyLbFilter()">
-          <button class="btn-filter" onclick="applyLbFilter()">Filter</button>
-          <button class="btn-filter-clear" onclick="clearLbFilter()">Reset</button>
+    <div style="background:var(--bg-glass);border:1px solid var(--border-subtle);border-radius:16px;padding:20px 24px;margin-bottom:24px;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);">📚 Mata Kuliah</label>
+          <select id="lb-subject-filter" onchange="applyLbFilter()" style="padding:10px 14px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-primary);font-size:13px;font-family:inherit;cursor:pointer;outline:none;min-width:240px;">
+            <option value="all">— Semua Mata Kuliah —</option>
+            ${subjectOptions}
+          </select>
+        </div>
+        <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);">🔍 Cari</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="lb-search" placeholder="Cari nama, NIM, atau kelas..." onkeydown="if(event.key===\'Enter\')applyLbFilter()" style="flex:1;padding:10px 14px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;">
+            <button onclick="applyLbFilter()" style="padding:10px 20px;background:linear-gradient(135deg,#6366F1,#8B5CF6);border:none;border-radius:10px;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">🔍 Filter</button>
+            <button onclick="clearLbFilter()" style="padding:10px 16px;background:var(--bg-glass);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">✕ Reset</button>
+          </div>
         </div>
       </div>
-      <div class="filter-group">
-        <label class="filter-label">📤 Export</label>
-        <div style="display:flex;gap:8px;">
-          <button class="btn-export excel" onclick="exportLbExcel()">📊 Excel</button>
-          <button class="btn-export pdf" onclick="exportLbPDF()">📄 PDF</button>
-          <button class="btn-export print" onclick="printLb()">🖨️ Print</button>
-        </div>
+      <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border-subtle);flex-wrap:wrap;align-items:center;">
+        <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-right:4px;">📤 Export:</span>
+        <button onclick="exportLbExcel()" style="padding:8px 16px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:8px;color:#10B981;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📊 Excel</button>
+        <button onclick="exportLbPDF()" style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;color:#EF4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📄 PDF</button>
+        <button onclick="printLb()" style="padding:8px 16px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:8px;color:#6366F1;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🖨️ Print</button>
       </div>
     </div>
     <div id="lb-table-wrap"></div>`;
-
   document.getElementById('lb-subject-filter').value=STATE.lbFilter.subject;
   document.getElementById('lb-search').value=STATE.lbFilter.search;
   applyLbFilter();
