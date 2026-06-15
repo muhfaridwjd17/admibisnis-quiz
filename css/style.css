@@ -1088,3 +1088,66 @@ body {
 .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
 .empty-state-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
 .empty-state-text { font-size: 14px; }
+
+/* ==================== LIGHT MODE ==================== */
+[data-theme="light"] {
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #FFFFFF;
+  --bg-card: rgba(255,255,255,0.9);
+  --bg-glass: rgba(0,0,0,0.03);
+  --bg-glass-hover: rgba(0,0,0,0.06);
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --border-subtle: rgba(0,0,0,0.08);
+  --border-glass: rgba(0,0,0,0.12);
+  --gradient-hero: linear-gradient(135deg,#F8FAFC 0%,#EEF2FF 50%,#E0E7FF 100%);
+}
+[data-theme="light"] body { background: var(--bg-primary); }
+[data-theme="light"] .sidebar { background: rgba(255,255,255,0.97); border-right-color: rgba(0,0,0,0.08); }
+[data-theme="light"] .topbar { background: rgba(248,250,252,0.9); border-bottom-color: rgba(0,0,0,0.08); }
+[data-theme="light"] .bg-grid { background-image: linear-gradient(rgba(99,102,241,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.05) 1px,transparent 1px); }
+[data-theme="light"] .orb { opacity: 0.08; }
+[data-theme="light"] .stat-card, [data-theme="light"] .card, [data-theme="light"] .subject-card,
+[data-theme="light"] .question-card, [data-theme="light"] .result-card, [data-theme="light"] .leaderboard-table,
+[data-theme="light"] .materi-card { background: white; border-color: rgba(0,0,0,0.08); }
+[data-theme="light"] .nav-item { color: #475569; }
+[data-theme="light"] .nav-item:hover { background: rgba(99,102,241,0.06); color: #0F172A; }
+[data-theme="light"] .nav-item.active { background: rgba(99,102,241,0.1); color: #4F46E5; }
+[data-theme="light"] .option-btn { background: #F8FAFC; border-color: #E2E8F0; color: #475569; }
+[data-theme="light"] .option-btn:hover { background: #EEF2FF; border-color: #6366F1; }
+[data-theme="light"] .lb-row:hover { background: #F8FAFC; }
+[data-theme="light"] .lb-header { background: #F1F5F9; }
+[data-theme="light"] .user-card { background: #F1F5F9; }
+[data-theme="light"] .btn-icon { background: #F1F5F9; border-color: #E2E8F0; color: #475569; }
+[data-theme="light"] .hero-heading { color: #0F172A; }
+[data-theme="light"] .hero-sub { color: #475569; }
+[data-theme="light"] .section-title { color: #0F172A; }
+[data-theme="light"] .nav-section-label { color: #94A3B8; }
+[data-theme="light"] .sidebar-tagline { color: #94A3B8; }
+
+/* ==================== THEME TOGGLE BTN ==================== */
+.theme-toggle {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+}
+.theme-toggle:hover { background: var(--bg-glass-hover); color: var(--text-primary); }
+
+/* ==================== TIMER PER SOAL ==================== */
+.quiz-timer.warning { background: rgba(239,68,68,0.15) !important; border-color: rgba(239,68,68,0.4) !important; color: #EF4444 !important; animation: timerPulse 0.8s ease infinite; }
+@keyframes timerPulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+.soal-timer-bar { height: 4px; background: var(--border-subtle); border-radius: 2px; overflow: hidden; margin-bottom: 20px; }
+.soal-timer-fill { height: 100%; background: var(--accent-indigo); border-radius: 2px; transition: width 1s linear; }
+.soal-timer-fill.warn { background: #F59E0B; }
+.soal-timer-fill.danger { background: #EF4444; }
