@@ -354,7 +354,7 @@ function renderNilaiPage() {
         <div class="filter-group" style="flex:1;">
           <label class="filter-label">🔍 Cari</label>
           <div style="display:flex;gap:8px;">
-            <input type="text" id="nilai-search" class="filter-input" placeholder="Cari nama, NIM, atau kelas..." onkeydown="if(event.key===\'Enter\')applyNilaiFilter()">
+            <input type="text" id="nilai-search" class="filter-input" placeholder="Cari di semua kolom: nama, NIM, kelas, nilai, grade, tanggal..." onkeydown="if(event.key===\'Enter\')applyNilaiFilter()">
             <button class="btn-filter" onclick="applyNilaiFilter()">🔍 Filter</button>
             <button class="btn-filter-clear" onclick="clearNilaiFilter()">✕ Reset</button>
           </div>
@@ -389,8 +389,16 @@ function getFilteredNilai() {
   return [...STATE.history].reverse().filter(r=>{
     const matchSubject = STATE.nilaiFilter.subject==='all' || r.subjectId===STATE.nilaiFilter.subject;
     const s = STATE.nilaiFilter.search;
-    const matchSearch = !s || (r.nama||'').toLowerCase().includes(s) || (r.nim||'').toLowerCase().includes(s) || (r.kelas||'').toLowerCase().includes(s);
-    return matchSubject && matchSearch;
+    if (!s) return matchSubject;
+    const sub=SHEETS_CONFIG[r.subjectId];
+    const grade=getGrade(r.score);
+    const haystack=[
+      r.nama, r.nim, r.kelas, sub?sub.title:r.subjectTitle, r.subjectTitle,
+      String(r.correct), String(r.total-r.correct), String(r.total), String(r.score)+'%', String(r.score),
+      grade.label, new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),
+      new Date(r.date).toLocaleDateString('id-ID')
+    ].filter(Boolean).join(' ').toLowerCase();
+    return matchSubject && haystack.includes(s);
   });
 }
 
@@ -404,7 +412,7 @@ function renderNilaiTable() {
   }
 
   wrap.innerHTML=`
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Menampilkan <strong style="color:var(--text-primary);">${filtered.length}</strong> hasil</div>
+    <div class="result-count-text">📋 Menampilkan <strong>${filtered.length}</strong> hasil ${STATE.nilaiFilter.search?'untuk pencarian "'+STATE.nilaiFilter.search+'"':''}</div>
     <div class="nilai-table-container" id="nilai-printable">
       <table class="data-table">
         <thead>
@@ -460,7 +468,7 @@ function renderLeaderboard() {
         <div class="filter-group" style="flex:1;">
           <label class="filter-label">🔍 Cari</label>
           <div style="display:flex;gap:8px;">
-            <input type="text" id="lb-search" class="filter-input" placeholder="Cari nama, NIM, atau kelas..." onkeydown="if(event.key===\'Enter\')applyLbFilter()">
+            <input type="text" id="lb-search" class="filter-input" placeholder="Cari di semua kolom: nama, NIM, kelas, nilai, grade, tanggal..." onkeydown="if(event.key===\'Enter\')applyLbFilter()">
             <button class="btn-filter" onclick="applyLbFilter()">🔍 Filter</button>
             <button class="btn-filter-clear" onclick="clearLbFilter()">✕ Reset</button>
           </div>
@@ -503,8 +511,16 @@ function getFilteredLb() {
     .filter(r=>{
       const matchSubject=STATE.lbFilter.subject==='all'||r.subjectId===STATE.lbFilter.subject;
       const s=STATE.lbFilter.search;
-      const matchSearch=!s||(r.nama||'').toLowerCase().includes(s)||(r.nim||'').toLowerCase().includes(s)||(r.kelas||'').toLowerCase().includes(s);
-      return matchSubject&&matchSearch;
+      if(!s) return matchSubject;
+      const sub=SHEETS_CONFIG[r.subjectId];
+      const grade=getGrade(r.score);
+      const haystack=[
+        r.nama, r.nim, r.kelas, sub?sub.title:r.subjectTitle, r.subjectTitle,
+        String(r.correct), String(r.total), `${r.correct}/${r.total}`, String(r.score)+'%', String(r.score),
+        grade.label, new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),
+        new Date(r.date).toLocaleDateString('id-ID')
+      ].filter(Boolean).join(' ').toLowerCase();
+      return matchSubject&&haystack.includes(s);
     })
     .sort((a,b)=>b.score-a.score);
 }
@@ -520,7 +536,7 @@ function renderLbTable() {
   }
 
   wrap.innerHTML=`
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Menampilkan <strong style="color:var(--text-primary);">${filtered.length}</strong> hasil</div>
+    <div class="result-count-text">🏆 Menampilkan <strong>${filtered.length}</strong> hasil ${STATE.lbFilter.search?'untuk pencarian "'+STATE.lbFilter.search+'"':''}</div>
     <div class="nilai-table-container" id="lb-printable">
       <table class="data-table">
         <thead>
@@ -557,67 +573,235 @@ function renderLbTable() {
     </div>`;
 }
 
-// ==================== EXPORT FUNCTIONS ====================
-function exportToExcel(data, filename) {
-  const headers = Object.keys(data[0]);
-  const csvRows = [headers.join(','), ...data.map(row => headers.map(h => `"${(row[h]||'').toString().replace(/"/g,'""')}"`).join(','))];
-  const blob = new Blob(['\uFEFF'+csvRows.join('\n')], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download=filename+'.csv'; a.click();
-  URL.revokeObjectURL(url);
-  showToast('📊 File Excel berhasil didownload!','success');
+// ==================== EXPORT: EXCEL (XLSX ASLI VIA SHEETJS) ====================
+function ensureXLSXLoaded(callback) {
+  if (window.XLSX) { callback(); return; }
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  script.onload = callback;
+  script.onerror = () => showToast('❌ Gagal memuat modul Excel. Cek koneksi internet.', 'error');
+  document.head.appendChild(script);
+}
+
+function exportToExcelReal(rows, headers, filename, sheetName) {
+  ensureXLSXLoaded(() => {
+    const wsData = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Lebar kolom otomatis
+    ws['!cols'] = headers.map((h,i) => {
+      const maxLen = Math.max(h.length, ...rows.map(r => String(r[i]||'').length));
+      return { wch: Math.min(Math.max(maxLen+3, 10), 40) };
+    });
+
+    // Style header
+    const headerRange = XLSX.utils.decode_range(ws['!ref']);
+    for (let c = headerRange.s.c; c <= headerRange.e.c; c++) {
+      const cellRef = XLSX.utils.encode_cell({r:0, c});
+      if (!ws[cellRef]) continue;
+      ws[cellRef].s = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: 'F97316' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      };
+    }
+
+    // Freeze header row
+    ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, filename + '.xlsx');
+    showToast('📊 File Excel (.xlsx) berhasil didownload!', 'success');
+  });
 }
 
 function exportNilaiExcel() {
-  const filtered=getFilteredNilai();
-  if(!filtered.length){showToast('⚠️ Tidak ada data untuk diexport','warning');return;}
-  const data=filtered.map((r,i)=>({
-    'No':i+1,'Tanggal':new Date(r.date).toLocaleDateString('id-ID'),'Nama':r.nama||'-','NIM':r.nim||'-','Kelas':r.kelas||'-',
-    'Mata Kuliah':r.subjectTitle||r.subjectId,'Benar':r.correct,'Salah':r.total-r.correct,'Total Soal':r.total,'Nilai (%)':r.score,'Grade':getGrade(r.score).label
-  }));
-  exportToExcel(data,'Nilai_Kuis_AdminBiz_'+new Date().toLocaleDateString('id-ID').replace(/\//g,'-'));
+  const filtered = getFilteredNilai();
+  if (!filtered.length) { showToast('⚠️ Tidak ada data untuk diexport', 'warning'); return; }
+  const headers = ['No','Tanggal','Nama','NIM','Kelas','Mata Kuliah','Benar','Salah','Total Soal','Nilai (%)','Grade'];
+  const rows = filtered.map((r,i) => {
+    const sub = SHEETS_CONFIG[r.subjectId];
+    const grade = getGrade(r.score);
+    return [i+1, new Date(r.date).toLocaleDateString('id-ID'), r.nama||'-', r.nim||'-', r.kelas||'-',
+      sub?sub.title:(r.subjectTitle||r.subjectId), r.correct, r.total-r.correct, r.total, r.score, grade.label];
+  });
+  exportToExcelReal(rows, headers, 'Nilai_Kuis_AdminBiz_'+new Date().toLocaleDateString('id-ID').replace(/\//g,'-'), 'Nilai Kuis');
 }
 
 function exportLbExcel() {
-  const filtered=getFilteredLb();
-  if(!filtered.length){showToast('⚠️ Tidak ada data untuk diexport','warning');return;}
-  const data=filtered.map((r,i)=>({
-    'Rank':i+1,'Nama':r.nama||'-','NIM':r.nim||'-','Kelas':r.kelas||'-',
-    'Mata Kuliah':r.subjectTitle||r.subjectId,'Benar':r.correct,'Total':r.total,'Nilai (%)':r.score,'Grade':getGrade(r.score).label,
-    'Tanggal':new Date(r.date).toLocaleDateString('id-ID')
-  }));
-  exportToExcel(data,'Leaderboard_AdminBiz_'+new Date().toLocaleDateString('id-ID').replace(/\//g,'-'));
+  const filtered = getFilteredLb();
+  if (!filtered.length) { showToast('⚠️ Tidak ada data untuk diexport', 'warning'); return; }
+  const headers = ['Rank','Nama','NIM','Kelas','Mata Kuliah','Benar','Total Soal','Nilai (%)','Grade','Tanggal'];
+  const rows = filtered.map((r,i) => {
+    const sub = SHEETS_CONFIG[r.subjectId];
+    const grade = getGrade(r.score);
+    return [i+1, r.nama||'-', r.nim||'-', r.kelas||'-', sub?sub.title:(r.subjectTitle||r.subjectId),
+      r.correct, r.total, r.score, grade.label, new Date(r.date).toLocaleDateString('id-ID')];
+  });
+  exportToExcelReal(rows, headers, 'Leaderboard_AdminBiz_'+new Date().toLocaleDateString('id-ID').replace(/\//g,'-'), 'Leaderboard');
 }
 
-function exportNilaiPDF() { exportPDF('nilai-printable','Nilai Kuis - AdminBiz'); }
-function exportLbPDF() { exportPDF('lb-printable','Leaderboard - AdminBiz'); }
+// ==================== EXPORT: PDF & PRINT (DESAIN PREMIUM) ====================
+function buildPrintDocument(title, subtitle, headers, rows, accentColor, statsHtml) {
+  const rowsHtml = rows.map((r, i) => `<tr class="${i % 2 === 0 ? 'even' : 'odd'}">${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+  const headerHtml = headers.map(h => `<th>${h}</th>`).join('');
 
-function exportPDF(elementId, title) {
-  const el=document.getElementById(elementId);
-  if(!el){showToast('⚠️ Tidak ada data untuk diexport','warning');return;}
-  const win=window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title><style>
-    body{font-family:Arial,sans-serif;padding:24px;color:#1a1a1a;font-size:13px;}
-    h2{color:#4F46E5;margin-bottom:4px;}
-    .sub{color:#666;font-size:12px;margin-bottom:20px;}
-    table{width:100%;border-collapse:collapse;}
-    th{background:#1E1B4B;color:white;padding:10px 12px;text-align:left;font-size:12px;}
-    td{padding:8px 12px;border-bottom:1px solid #eee;}
-    tr:nth-child(even){background:#F8F9FA;}
-    .score{font-weight:bold;}
-    @media print{@page{margin:1.5cm;}}
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>
+  <style>
+    @page { margin: 1.6cm; size: A4 landscape; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1C0A00; padding: 0; background: white; }
+
+    .doc-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-bottom: 18px; margin-bottom: 20px;
+      border-bottom: 3px solid ${accentColor};
+    }
+    .doc-brand { display: flex; align-items: center; gap: 14px; }
+    .doc-logo {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: linear-gradient(135deg, ${accentColor}, #EF4444);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: white;
+    }
+    .doc-brand-text h1 { font-size: 20px; font-weight: 800; color: #1C0A00; letter-spacing: -0.5px; }
+    .doc-brand-text p { font-size: 11px; color: #78716C; margin-top: 2px; }
+    .doc-meta { text-align: right; font-size: 10px; color: #78716C; }
+    .doc-meta strong { color: ${accentColor}; }
+
+    .doc-title-bar { margin-bottom: 16px; }
+    .doc-title-bar h2 { font-size: 16px; font-weight: 800; color: #1C0A00; margin-bottom: 3px; }
+    .doc-title-bar p { font-size: 11px; color: #78716C; }
+
+    .doc-stats { display: flex; gap: 12px; margin-bottom: 18px; }
+    .doc-stat {
+      flex: 1; padding: 12px 16px; border-radius: 10px;
+      background: linear-gradient(135deg, ${accentColor}10, ${accentColor}05);
+      border: 1px solid ${accentColor}25; text-align: center;
+    }
+    .doc-stat .num { font-size: 22px; font-weight: 900; color: ${accentColor}; }
+    .doc-stat .lbl { font-size: 9px; font-weight: 700; color: #78716C; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 10.5px; border-radius: 10px; overflow: hidden; }
+    thead th {
+      background: linear-gradient(135deg, ${accentColor}, #EF4444);
+      color: white; padding: 10px 12px; text-align: left;
+      font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    tbody td { padding: 9px 12px; border-bottom: 1px solid #F1E4D8; }
+    tbody tr.even { background: #FFFBF5; }
+    tbody tr.odd { background: white; }
+    tbody tr:last-child td { border-bottom: 2px solid ${accentColor}40; }
+
+    .doc-footer {
+      margin-top: 24px; padding-top: 14px; border-top: 1px solid #F1E4D8;
+      display: flex; justify-content: space-between; font-size: 9px; color: #A8A29E;
+    }
+
+    @media print {
+      .no-print { display: none; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style></head><body>
-  <h2>${title}</h2>
-  <div class="sub">Dicetak pada: ${new Date().toLocaleString('id-ID')} · Portal AdminBiz D4 Administrasi Bisnis PNUP</div>
-  ${el.innerHTML}
-  <script>window.onload=function(){window.print();}<\/script>
-  </body></html>`);
-  win.document.close();
-  showToast('📄 Membuka preview PDF...','success');
+
+  <div class="doc-header">
+    <div class="doc-brand">
+      <div class="doc-logo">🎓</div>
+      <div class="doc-brand-text">
+        <h1>ADMINBIZ</h1>
+        <p>Portal Akademik D4 Administrasi Bisnis · PNUP</p>
+      </div>
+    </div>
+    <div class="doc-meta">
+      Dicetak: <strong>${new Date().toLocaleString('id-ID', {dateStyle:'long', timeStyle:'short'})}</strong><br>
+      Total Data: <strong>${rows.length} baris</strong>
+    </div>
+  </div>
+
+  <div class="doc-title-bar">
+    <h2>${title}</h2>
+    <p>${subtitle}</p>
+  </div>
+
+  ${statsHtml || ''}
+
+  <table>
+    <thead><tr>${headerHtml}</tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+
+  <div class="doc-footer">
+    <span>Portal AdminBiz · Sistem Kuis Interaktif Administrasi Bisnis</span>
+    <span>Halaman dicetak otomatis dari sistem</span>
+  </div>
+
+  <script>window.onload = function(){ window.print(); }<\/script>
+  </body></html>`;
 }
 
-function printNilai() { exportPDF('nilai-printable','Nilai Kuis - AdminBiz'); }
-function printLb() { exportPDF('lb-printable','Leaderboard - AdminBiz'); }
+function exportNilaiPDF() { printNilai(); }
+function exportLbPDF() { printLb(); }
+
+function printNilai() {
+  const filtered = getFilteredNilai();
+  if (!filtered.length) { showToast('⚠️ Tidak ada data untuk diexport', 'warning'); return; }
+
+  const headers = ['No','Tanggal','Nama','NIM','Kelas','Mata Kuliah','Benar','Salah','Nilai','Grade'];
+  const rows = filtered.map((r,i) => {
+    const sub = SHEETS_CONFIG[r.subjectId];
+    const grade = getGrade(r.score);
+    return [i+1, new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}),
+      `<strong>${r.nama||'-'}</strong>`, r.nim||'-', r.kelas||'-', sub?`${sub.icon} ${sub.title}`:(r.subjectTitle||r.subjectId),
+      `<span style="color:#059669;font-weight:700;">${r.correct}</span>`,
+      `<span style="color:#E11D48;font-weight:700;">${r.total-r.correct}</span>`,
+      `<strong style="color:${grade.color};">${r.score}%</strong>`,
+      `<span style="background:${grade.color};color:white;padding:2px 8px;border-radius:5px;font-weight:700;font-size:9px;">${grade.label}</span>`];
+  });
+
+  const avg = Math.round(filtered.reduce((a,b)=>a+b.score,0)/filtered.length);
+  const best = Math.max(...filtered.map(r=>r.score));
+  const passed = filtered.filter(r=>r.score>=70).length;
+  const statsHtml = `<div class="doc-stats">
+    <div class="doc-stat"><div class="num">${filtered.length}</div><div class="lbl">Total Peserta</div></div>
+    <div class="doc-stat"><div class="num">${avg}%</div><div class="lbl">Rata-rata Nilai</div></div>
+    <div class="doc-stat"><div class="num">${best}%</div><div class="lbl">Nilai Tertinggi</div></div>
+    <div class="doc-stat"><div class="num">${passed}</div><div class="lbl">Lulus (≥70%)</div></div>
+  </div>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(buildPrintDocument('Laporan Nilai Kuis', 'Rekap hasil kuis mahasiswa Administrasi Bisnis', headers, rows, '#F97316', statsHtml));
+  win.document.close();
+  showToast('📄 Membuka preview cetak...', 'success');
+}
+
+function printLb() {
+  const filtered = getFilteredLb();
+  if (!filtered.length) { showToast('⚠️ Tidak ada data untuk diexport', 'warning'); return; }
+
+  const medals = ['🥇','🥈','🥉'];
+  const headers = ['Rank','Nama','NIM','Kelas','Mata Kuliah','Benar','Nilai','Grade','Tanggal'];
+  const rows = filtered.map((r,i) => {
+    const sub = SHEETS_CONFIG[r.subjectId];
+    const grade = getGrade(r.score);
+    return [i<3?medals[i]:`#${i+1}`, `<strong>${r.nama||'-'}</strong>`, r.nim||'-', r.kelas||'-',
+      sub?`${sub.icon} ${sub.title}`:(r.subjectTitle||r.subjectId), `${r.correct}/${r.total}`,
+      `<strong style="color:${grade.color};">${r.score}%</strong>`,
+      `<span style="background:${grade.color};color:white;padding:2px 8px;border-radius:5px;font-weight:700;font-size:9px;">${grade.label}</span>`,
+      new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})];
+  });
+
+  const statsHtml = `<div class="doc-stats">
+    <div class="doc-stat"><div class="num">${filtered.length}</div><div class="lbl">Total Entri</div></div>
+    <div class="doc-stat"><div class="num">${filtered[0]?.score||0}%</div><div class="lbl">Peringkat Tertinggi</div></div>
+    <div class="doc-stat"><div class="num">${new Set(filtered.map(r=>r.subjectId)).size}</div><div class="lbl">Mata Kuliah</div></div>
+  </div>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(buildPrintDocument('Leaderboard Kuis', 'Peringkat nilai terbaik peserta kuis', headers, rows, '#F97316', statsHtml));
+  win.document.close();
+  showToast('📄 Membuka preview cetak...', 'success');
+}
 
 // ==================== MATERI ====================
 const MATERI_DATA={pkn:{deskripsi:'Mempelajari nilai-nilai kebangsaan, hak dan kewajiban warga negara, serta sistem pemerintahan Indonesia.',topik:[{judul:'Pancasila sebagai Dasar Negara',isi:'Pancasila merupakan dasar filosofis negara Indonesia yang terdiri dari 5 sila. Tercantum dalam Pembukaan UUD 1945 alinea ke-4. Fungsi: dasar negara, ideologi nasional, pandangan hidup bangsa, dan sumber hukum.'},{judul:'UUD 1945 dan Amandemen',isi:'UUD 1945 adalah konstitusi tertinggi Indonesia. Telah diamandemen 4 kali (1999-2002). MPR berwenang mengubah UUD. Pasal 31: hak pendidikan. Pasal 27 ayat 3: bela negara. Pasal 30: pertahanan negara.'},{judul:'Hak dan Kewajiban Warga Negara',isi:'Hak WNI: pendidikan, pekerjaan, perlindungan hukum. Kewajiban WNI: mematuhi hukum, membayar pajak, bela negara. Asas personalitas aktif: WNI di luar negeri tetap tunduk hukum Indonesia.'},{judul:'Sistem Pemerintahan Indonesia',isi:'Indonesia menganut sistem presidensial. Presiden adalah kepala negara sekaligus kepala pemerintahan. Lembaga negara: MPR, DPR, DPD, Presiden, MA, MK, KY. Pemilu berdasarkan asas LUBER JURDIL.'},{judul:'Bhinneka Tunggal Ika',isi:'Berasal dari kitab Sutasoma karangan Mpu Tantular (Majapahit), bahasa Kawi. Artinya "Berbeda-beda tetapi tetap satu jua". Semboyan persatuan bangsa Indonesia yang majemuk.'}]},mpi:{deskripsi:'Mempelajari teori dan praktik pengelolaan portofolio investasi, analisis risiko, dan instrumen keuangan.',topik:[{judul:'Teori Portofolio Modern (Markowitz)',isi:'Dikembangkan Harry Markowitz (1952). Diversifikasi mengurangi risiko tanpa mengorbankan return. Efficient Frontier: kumpulan portofolio optimal berdasarkan risk-return trade-off.'},{judul:'Capital Asset Pricing Model (CAPM)',isi:'E(Ri) = Rf + βi × [E(Rm) - Rf]. Beta > 1: lebih volatil dari pasar. Beta < 1: lebih stabil dari pasar. Contoh: Rf=4%, Rm=10%, β=1,5 → E(Ri) = 4% + 1,5×(10%-4%) = 13%.'},{judul:'Risiko Investasi',isi:'Risiko sistematis (market risk): tidak bisa dihilangkan dengan diversifikasi — inflasi, krisis ekonomi. Risiko tidak sistematis: bisa dihilangkan dengan diversifikasi — risiko perusahaan spesifik.'},{judul:'Efficient Market Hypothesis (EMH)',isi:'Bentuk lemah: harga mencerminkan info historis. Bentuk semi-kuat: harga mencerminkan semua info publik. Bentuk kuat: harga mencerminkan semua info termasuk insider information.'},{judul:'Instrumen & Pengukuran Kinerja',isi:'Saham: kepemilikan perusahaan. Obligasi: surat utang berbunga. Zero-coupon bond: dijual di bawah nilai nominal. Sharpe Ratio = (Return Portfolio - Risk-Free Rate) / Standar Deviasi Portfolio.'}]},pk:{deskripsi:'Mempelajari faktor-faktor yang mempengaruhi keputusan pembelian konsumen.',topik:[{judul:'Hierarki Kebutuhan Maslow',isi:'Dari dasar ke puncak: (1) Fisiologis: makan, minum, tidur. (2) Keamanan: perlindungan, stabilitas. (3) Sosial: cinta, rasa memiliki. (4) Penghargaan: status, prestasi. (5) Aktualisasi diri.'},{judul:'Proses Pengambilan Keputusan',isi:'5 tahap: Pengenalan masalah → Pencarian informasi → Evaluasi alternatif → Keputusan pembelian → Perilaku pasca pembelian. Disonansi kognitif terjadi SETELAH pembelian.'},{judul:'Faktor yang Mempengaruhi Konsumen',isi:'Budaya: nilai dan norma masyarakat. Sosial: kelompok referensi primer (keluarga, teman dekat) paling berpengaruh. Psikologis: motivasi, persepsi, pembelajaran. Pribadi: usia, gaya hidup.'},{judul:'Segmentasi Pasar',isi:'Demografis: usia, jenis kelamin, pendapatan. Geografis: wilayah. Psikografis: gaya hidup, kepribadian — paling sulit diukur tapi powerful. Behavioral: frekuensi pembelian, loyalitas merek.'},{judul:'Jenis Perilaku Pembelian',isi:'Complex buying: keterlibatan tinggi, beda merek signifikan (mobil, rumah). Habitual buying: keterlibatan rendah, tidak beda merek (garam). Impulse buying: pembelian tanpa rencana. High involvement = produk mahal dan jarang dibeli.'}]},kep:{deskripsi:'Mempelajari berbagai teori, gaya, dan pendekatan kepemimpinan efektif dalam organisasi.',topik:[{judul:'Gaya-Gaya Kepemimpinan',isi:'Otoriter: pemimpin pengambil keputusan tunggal, bawahan hanya melaksanakan. Demokratis: libatkan bawahan dalam pengambilan keputusan. Laissez-faire: kebebasan penuh kepada bawahan. Transformasional: ubah nilai dan motivasi pengikut.'},{judul:'Teori Situasional (Hersey & Blanchard)',isi:'Gaya disesuaikan kematangan bawahan. M1 (rendah) → Telling/Directing: perintah langsung. M2 → Selling/Coaching: jual ide. M3 → Participating: ikutsertakan bawahan. M4 (tinggi) → Delegating: serahkan tugas penuh.'},{judul:'Kepemimpinan Transformasional vs Transaksional',isi:'Transformasional (Burns/Bass): inspirasi visi bersama, ubah nilai pengikut, karisma, stimulasi intelektual. Transaksional: fokus pertukaran reward untuk kinerja, lebih mempertahankan status quo.'},{judul:'Teori X dan Teori Y (McGregor)',isi:'Teori X: bawahan malas, tidak suka tanggung jawab, perlu dikontrol ketat dan diarahkan. Teori Y: bawahan kreatif, bisa mandiri, suka tanggung jawab jika kondisi kerja mendukung.'},{judul:'Sumber Kekuasaan & Emotional Intelligence',isi:'French & Raven: Legitimate (posisi formal), Reward (imbalan), Coercive (hukuman), Expert (keahlian), Referent (kekaguman). EQ Goleman: self-awareness, self-regulation, motivation, empathy, social skills.'}]},pp:{deskripsi:'Mempelajari konsep dan teknik memberikan pelayanan terbaik kepada pelanggan.',topik:[{judul:'Konsep Pelayanan Prima (A3)',isi:'Attitude (sikap positif, ramah, sopan terhadap pelanggan), Attention (perhatian penuh, mendengarkan aktif), Action (tindakan nyata untuk memenuhi kebutuhan). Tujuan akhir: kepuasan dan loyalitas pelanggan jangka panjang.'},{judul:'SERVQUAL (Parasuraman)',isi:'5 dimensi kualitas layanan: Tangible (fasilitas fisik yang terlihat), Reliability (kemampuan layanan tepat waktu dan akurat), Responsiveness (kecepatan membantu), Assurance (pengetahuan dan kesopanan), Empathy (perhatian individual).'},{judul:'Mengukur Kepuasan Pelanggan',isi:'CSI (Customer Satisfaction Index): indeks kepuasan berdasarkan survei. NPS (Net Promoter Score) = % Promoter (skor 9-10) - % Detractor (skor 0-6). CLV (Customer Lifetime Value): total nilai pelanggan sepanjang hubungan dengan perusahaan.'},{judul:'Penanganan Keluhan (LAST)',isi:'Listen: dengarkan keluhan dengan penuh perhatian tanpa memotong. Apologize: minta maaf dengan tulus meski bukan kesalahan kita. Solve: selesaikan masalah dengan tepat dan cepat. Thank: ucapkan terima kasih atas masukan pelanggan.'},{judul:'Prinsip Pelayanan Unggul',isi:'Underpromise & overdeliver: janjikan sedikit, berikan lebih dari yang dijanjikan. Customer-centric: pelanggan sebagai pusat semua keputusan. Konsistensi standar layanan di setiap interaksi dan saluran komunikasi.'}]},ebc:{deskripsi:'Mempelajari teknik penulisan surat bisnis dan korespondensi profesional dalam bahasa Inggris.',topik:[{judul:'Structure of Business Letters',isi:'Parts of a business letter: (1) Letterhead/Date, (2) Inside address, (3) Salutation, (4) Body — opening, middle, closing paragraph, (5) Complimentary close, (6) Signature block. Each part has specific function and placement.'},{judul:'Salutations and Closings',isi:'"Yours faithfully" = when you do NOT know the recipient\'s name (used with Dear Sir/Madam). "Yours sincerely" = when you KNOW the recipient\'s name (used with Dear Mr./Ms. [Name]). Both A and C: "Dear Sir/Madam" AND "To Whom It May Concern" are both acceptable for unknown recipients.'},{judul:'Email Etiquette in Business',isi:'Subject line: brief and informative — e.g., "Meeting Request – March 15". CC (Carbon Copy): copy to relevant parties who need to be informed. BCC (Blind Carbon Copy): hidden copy. Opening: "I am writing to...", "With reference to your email...". Always professional.'},{judul:'Memorandum (Memo)',isi:'Memo is for INTERNAL communication within an organization. Standard format: TO:, FROM:, DATE:, SUBJECT: header block. No formal salutation or complimentary close needed. Tone: formal but concise. Purpose: announcements, reminders, policy updates.'},{judul:'Polite Language & Business Requests',isi:'"I would appreciate it if you could..." = most polite. "Could you please..." = polite request. "Would it be possible to..." = very formal polite. Avoid: "You must send...", "Give me..." — too direct and impolite in business context. Enclosure notation indicates additional documents.'}]},sb:{deskripsi:'Mempelajari simulasi pengambilan keputusan bisnis dalam berbagai skenario strategis.',topik:[{judul:'Analisis SWOT',isi:'Strengths (kekuatan internal perusahaan), Weaknesses (kelemahan internal), Opportunities (peluang eksternal yang menguntungkan), Threats (ancaman eksternal yang merugikan). Strategi: SO (manfaatkan kekuatan-peluang), WO, ST, WT.'},{judul:'Strategi Bersaing Porter',isi:'Cost Leadership: jadi produsen berbiaya terendah di industri. Differentiation: tawarkan produk/jasa unik bernilai tinggi. Focus: layani segmen sempit. Market penetration: tingkatkan penjualan produk ada di pasar ada. Blue Ocean: ciptakan pasar baru tanpa pesaing.'},{judul:'Break-Even Point (BEP)',isi:'BEP Unit = Total Biaya Tetap / (Harga Jual - Biaya Variabel per Unit). Di titik BEP: Total Pendapatan = Total Biaya, Laba = 0. Di atas BEP = untung. Di bawah BEP = rugi. BEP penting untuk menentukan target penjualan minimum.'},{judul:'Key Performance Indicators (KPI)',isi:'ROI = (Net Profit / Total Investment) × 100%. Market Share = (Penjualan Perusahaan / Total Industri) × 100%. Cash flow positif: arus kas masuk > arus kas keluar. Perbedaan: cash flow ≠ profit — bisa profit tapi cash flow negatif.'},{judul:'Pengambilan Keputusan Bisnis',isi:'Pricing strategy mempertimbangkan tiga hal: biaya produksi (floor price), harga pesaing (benchmark), dan nilai bagi pelanggan (ceiling price). Balanced Scorecard: 4 perspektif kinerja: Keuangan, Pelanggan, Proses Internal, Pembelajaran & Pertumbuhan.'}]},akb:{deskripsi:'Mempelajari penerapan aplikasi komputer dalam kegiatan bisnis sehari-hari.',topik:[{judul:'Microsoft Excel — Fungsi Dasar & Penting',isi:'SUM (jumlah), AVERAGE (rata-rata), COUNT (hitung angka), IF (logika kondisi), VLOOKUP (cari nilai berdasarkan kolom). Shortcut: Ctrl+Z (undo), Ctrl+S (simpan), Ctrl+C/V (copy/paste), F2 (edit sel). Format file: .xlsx (Excel modern), .xls (lama), .csv (universal).'},{judul:'Microsoft Excel — Fitur Analitik',isi:'Pivot Table: meringkas dan menganalisis data besar dengan drag-drop field — SANGAT powerful untuk laporan. Conditional Formatting: format otomatis berdasarkan kondisi (warnai sel merah jika nilai < 60). Data Validation: batasi jenis input data. Filter & Sort untuk tampilkan/urutkan data.'},{judul:'Microsoft Word — Fitur Bisnis',isi:'Mail Merge: buat surat/undangan massal otomatis dari sumber data Excel atau Access. Track Changes: lacak setiap perubahan dokumen. Table of Contents: daftar isi otomatis dari heading. Header/Footer: informasi konsisten di setiap halaman. Macro: otomatisasi tugas berulang dengan VBA.'},{judul:'Database & Microsoft Access',isi:'Database: kumpulan data terstruktur dan saling terkait. DBMS: software pengelola database. Microsoft Access: DBMS desktop untuk bisnis kecil-menengah, berbasis GUI. Objek utama: Table (data), Query (pertanyaan ke data), Form (input), Report (output cetak). Relasi: primary key & foreign key.'},{judul:'Cloud Computing & Integrasi Bisnis',isi:'Cloud computing manfaat: akses kapan/di mana saja, hemat biaya infrastruktur IT, skalabel sesuai kebutuhan. ERP (Enterprise Resource Planning): sistem terintegrasi kelola seluruh proses bisnis (SAP, Oracle). CRM: kelola interaksi pelanggan (Salesforce). Google Workspace & Microsoft 365 = cloud office suite.'}]},kb:{deskripsi:'Mempelajari formulasi dan implementasi kebijakan bisnis serta kerangka strategis perusahaan.',topik:[{judul:"Porter's Five Forces",isi:'5 kekuatan kompetitif yang menentukan daya tarik industri: (1) Intensitas persaingan antar pesaing yang ada. (2) Ancaman pendatang baru (barrier to entry). (3) Ancaman produk/jasa substitusi. (4) Daya tawar pemasok. (5) Daya tawar pembeli. Semakin kuat kelima kekuatan, semakin rendah profitabilitas.'},{judul:'BCG Matrix',isi:'Stars: pangsa pasar tinggi, pertumbuhan tinggi → investasi agresif. Cash Cows: pangsa tinggi, tumbuh rendah → pertahankan, hasilkan kas untuk Stars. Question Marks: pangsa rendah, tumbuh tinggi → putuskan: investasi atau divestasi. Dogs: keduanya rendah → pertimbangkan divestasi.'},{judul:'Strategi Korporat',isi:'Merger: dua perusahaan bergabung menjadi satu entitas baru yang setara. Akuisisi: satu perusahaan membeli dan mengontrol perusahaan lain. Diversifikasi konglomerat: masuk bisnis yang TIDAK berhubungan dengan bisnis utama. Blue Ocean Strategy: ciptakan ruang pasar baru tanpa pesaing.'},{judul:'Good Corporate Governance (GCG)',isi:'5 prinsip GCG: Transparency (keterbukaan informasi), Accountability (kejelasan fungsi dan pertanggungjawaban), Responsibility (kepatuhan terhadap peraturan), Independency (profesional tanpa konflik kepentingan), Fairness (keadilan bagi seluruh stakeholder). CSR: tanggung jawab ke masyarakat dan lingkungan.'},{judul:'Balanced Scorecard & VRIO',isi:'Balanced Scorecard (Kaplan & Norton): ukur kinerja dari 4 perspektif seimbang — Keuangan, Pelanggan, Proses Internal, Pembelajaran & Pertumbuhan. VRIO (Barney): sumber daya berikan keunggulan kompetitif berkelanjutan jika Valuable, Rare, Inimitable (tidak dapat ditiru), dan Organized.'}]},sim:{deskripsi:'Mempelajari konsep dan penerapan sistem informasi dalam mendukung manajemen bisnis.',topik:[{judul:'Konsep Dasar SIM',isi:'SIM (Sistem Informasi Manajemen): sistem yang menyediakan informasi untuk mendukung pengambilan keputusan manajerial. Hirarki: TPS (transaksi harian) → MIS (laporan terstruktur) → DSS (semi-terstruktur) → EIS (ringkasan eksekutif). Data → diproses → Informasi → digunakan untuk keputusan.'},{judul:'ERP (Enterprise Resource Planning)',isi:'ERP: sistem informasi TERINTEGRASI yang mengelola seluruh proses bisnis dalam satu platform — keuangan, SDM, produksi, distribusi, penjualan. Contoh populer: SAP, Oracle, Microsoft Dynamics. Keunggulan: data real-time, eliminasi duplikasi data, efisiensi lintas departemen.'},{judul:'DSS dan EIS',isi:'DSS (Decision Support System): bantu manajer menengah/atas membuat keputusan SEMI-TERSTRUKTUR menggunakan model analitik dan simulasi. EIS/ESS (Executive Information System): sajikan informasi ringkasan dan KPI dalam format dashboard visual untuk eksekutif senior.'},{judul:'CRM dan Data Warehouse',isi:'CRM (Customer Relationship Management): sistem kelola seluruh interaksi dan hubungan dengan pelanggan sepanjang siklus hidup (Salesforce, HubSpot). Data Warehouse: basis data besar dioptimalkan untuk ANALISIS historis, bukan transaksi. OLAP untuk analisis multi-dimensi, OLTP untuk transaksi real-time.'},{judul:'Big Data & Business Intelligence',isi:'Big Data dicirikan 3V: Volume (data sangat besar), Velocity (kecepatan tinggi), Variety (berbagai format). BI Tools (Tableau, Power BI): ubah data mentah jadi wawasan bisnis yang actionable. Keamanan informasi CIA: Confidentiality (kerahasiaan), Integrity (keutuhan), Availability (ketersediaan). Interoperabilitas: sistem berbeda saling berkomunikasi.'}]}};
