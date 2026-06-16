@@ -21,6 +21,17 @@ async function kirimHasilKeSheets(data) {
   } catch(e) { console.warn('Gagal kirim ke Sheets:', e); }
 }
 
+function hapusSatuNilai(recordId) {
+  if (!confirm('Hapus data ini secara permanen? Data juga akan terhapus dari Google Sheets.')) return;
+  STATE.history = STATE.history.filter(r => r.recordId !== recordId);
+  localStorage.setItem('quiz_history', JSON.stringify(STATE.history));
+  kirimHasilKeSheets({ action: 'delete', recordId });
+  showToast('🗑️ Data berhasil dihapus', 'warning');
+  renderNilaiTable();
+  if (STATE.currentPage === 'leaderboard') renderLbTable();
+  if (STATE.currentPage === 'dashboard') renderDashboard();
+}
+
 function initTheme() {
   const saved = localStorage.getItem('theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
@@ -202,7 +213,8 @@ function finishQuiz() {
   const totalSecs = STATE.totalSoalTime || Math.round((Date.now() - (STATE.quizStartTime||Date.now()))/1000);
   const mm = Math.floor(totalSecs/60), ss = totalSecs%60;
   const timeStr = `${mm}m ${ss}s`;
-  const record={subjectId:sub.id,subjectTitle:sub.title,score,correct,total,nama:identity.nama,nim:identity.nim,kelas:identity.kelas,timeStr,date:new Date().toISOString()};
+  const recordId = Date.now()+'_'+Math.random().toString(36).slice(2);
+  const record={recordId,subjectId:sub.id,subjectTitle:sub.title,score,correct,total,nama:identity.nama,nim:identity.nim,kelas:identity.kelas,timeStr,date:new Date().toISOString()};
   STATE.history.push(record);
   localStorage.setItem('quiz_history',JSON.stringify(STATE.history));
   kirimHasilKeSheets(record);
@@ -443,6 +455,7 @@ function renderNilaiTable() {
             <th>Waktu</th>
             <th>Nilai</th>
             <th>Grade</th>
+            <th class="no-print">Aksi</th>
           </tr>
         </thead>
         <tbody>
@@ -460,6 +473,7 @@ function renderNilaiTable() {
               <td style="font-size:12px;color:var(--text-muted);">⏱️ ${r.timeStr||'-'}</td>
               <td><span class="score-pill" style="background:${grade.color}20;color:${grade.color};font-weight:800;">${r.score}%</span></td>
               <td><span style="background:${grade.color};color:white;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;">${grade.label}</span></td>
+              <td class="no-print"><button class="btn-row-delete" onclick="hapusSatuNilai('${r.recordId}')" title="Hapus data ini">🗑️</button></td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -887,7 +901,17 @@ function showToast(msg,type='info'){
   container.appendChild(toast);
   setTimeout(()=>{toast.style.opacity='0';toast.style.transition='opacity 0.3s';setTimeout(()=>toast.remove(),300);},2500);
 }
-function clearHistory(){if(confirm('Yakin ingin menghapus semua riwayat kuis?')){STATE.history=[];localStorage.removeItem('quiz_history');showToast('🗑️ Riwayat dihapus','warning');renderNilaiPage();renderDashboard();}}
+function clearHistory(){
+  if(confirm('Yakin ingin menghapus semua riwayat kuis? Data di Google Sheets juga akan ikut terhapus.')){
+    STATE.history=[];
+    localStorage.removeItem('quiz_history');
+    kirimHasilKeSheets({ action: 'deleteAll' });
+    showToast('🗑️ Semua riwayat dihapus','warning');
+    renderNilaiPage();
+    renderDashboard();
+    if (STATE.currentPage === 'leaderboard') renderLbTable();
+  }
+}
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('open');}
 
 document.addEventListener('DOMContentLoaded',()=>{
