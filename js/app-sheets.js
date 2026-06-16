@@ -351,6 +351,17 @@ function renderNilaiPage() {
             ${subjectOptions}
           </select>
         </div>
+        <div class="filter-group">
+          <label class="filter-label">🏅 Grade</label>
+          <select id="nilai-grade-filter" class="filter-select" style="min-width:130px;" onchange="applyNilaiFilter()">
+            <option value="all">— Semua Grade —</option>
+            <option value="A">Grade A</option>
+            <option value="B">Grade B</option>
+            <option value="C">Grade C</option>
+            <option value="D">Grade D</option>
+            <option value="E">Grade E</option>
+          </select>
+        </div>
         <div class="filter-group" style="flex:1;">
           <label class="filter-label">🔍 Cari</label>
           <div style="display:flex;gap:8px;">
@@ -369,18 +380,21 @@ function renderNilaiPage() {
     </div>
     <div id="nilai-table-wrap"></div>`;
   document.getElementById('nilai-subject-filter').value=STATE.nilaiFilter.subject;
+  document.getElementById('nilai-grade-filter').value=STATE.nilaiFilter.grade||'all';
   document.getElementById('nilai-search').value=STATE.nilaiFilter.search;
   applyNilaiFilter();
 }
 
 function applyNilaiFilter() {
   STATE.nilaiFilter.subject = document.getElementById('nilai-subject-filter').value;
+  STATE.nilaiFilter.grade = document.getElementById('nilai-grade-filter').value;
   STATE.nilaiFilter.search = document.getElementById('nilai-search').value.trim().toLowerCase();
   renderNilaiTable();
 }
 function clearNilaiFilter() {
-  STATE.nilaiFilter={subject:'all',search:''};
+  STATE.nilaiFilter={subject:'all',grade:'all',search:''};
   document.getElementById('nilai-subject-filter').value='all';
+  document.getElementById('nilai-grade-filter').value='all';
   document.getElementById('nilai-search').value='';
   renderNilaiTable();
 }
@@ -388,17 +402,18 @@ function clearNilaiFilter() {
 function getFilteredNilai() {
   return [...STATE.history].reverse().filter(r=>{
     const matchSubject = STATE.nilaiFilter.subject==='all' || r.subjectId===STATE.nilaiFilter.subject;
-    const s = STATE.nilaiFilter.search;
-    if (!s) return matchSubject;
-    const sub=SHEETS_CONFIG[r.subjectId];
     const grade=getGrade(r.score);
+    const matchGrade = !STATE.nilaiFilter.grade || STATE.nilaiFilter.grade==='all' || grade.label===STATE.nilaiFilter.grade;
+    const s = STATE.nilaiFilter.search;
+    if (!s) return matchSubject && matchGrade;
+    const sub=SHEETS_CONFIG[r.subjectId];
     const haystack=[
       r.nama, r.nim, r.kelas, sub?sub.title:r.subjectTitle, r.subjectTitle,
       String(r.correct), String(r.total-r.correct), String(r.total), String(r.score)+'%', String(r.score),
-      grade.label, new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),
+      grade.label, r.timeStr||'', new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),
       new Date(r.date).toLocaleDateString('id-ID')
     ].filter(Boolean).join(' ').toLowerCase();
-    return matchSubject && haystack.includes(s);
+    return matchSubject && matchGrade && haystack.includes(s);
   });
 }
 
@@ -414,17 +429,18 @@ function renderNilaiTable() {
   wrap.innerHTML=`
     <div class="result-count-text">📋 Menampilkan <strong>${filtered.length}</strong> hasil ${STATE.nilaiFilter.search?'untuk pencarian "'+STATE.nilaiFilter.search+'"':''}</div>
     <div class="nilai-table-container" id="nilai-printable">
-      <table class="data-table">
+      <table class="data-table data-table-center">
         <thead>
           <tr>
             <th>No</th>
             <th>Tanggal</th>
-            <th>Nama</th>
+            <th class="col-left">Nama</th>
             <th>NIM</th>
             <th>Kelas</th>
-            <th>Mata Kuliah</th>
+            <th class="col-left">Mata Kuliah</th>
             <th>Benar</th>
             <th>Salah</th>
+            <th>Waktu</th>
             <th>Nilai</th>
             <th>Grade</th>
           </tr>
@@ -433,16 +449,17 @@ function renderNilaiTable() {
           ${filtered.map((r,i)=>{
             const sub=SHEETS_CONFIG[r.subjectId], grade=getGrade(r.score);
             return`<tr>
-              <td style="text-align:center;color:var(--text-muted);">${i+1}</td>
-              <td style="font-size:12px;">${new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</td>
-              <td><strong>${r.nama||'-'}</strong></td>
-              <td style="font-family:monospace;font-size:12px;">${r.nim||'-'}</td>
-              <td style="text-align:center;">${r.kelas||'-'}</td>
-              <td>${sub?`${sub.icon} ${sub.title}`:r.subjectId}</td>
-              <td style="text-align:center;color:#10B981;font-weight:700;">${r.correct}</td>
-              <td style="text-align:center;color:#EF4444;font-weight:700;">${r.total-r.correct}</td>
-              <td style="text-align:center;"><span class="score-pill" style="background:${grade.color}20;color:${grade.color};font-weight:800;">${r.score}%</span></td>
-              <td style="text-align:center;"><span style="background:${grade.color};color:white;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;">${grade.label}</span></td>
+              <td>${i+1}</td>
+              <td>${new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</td>
+              <td class="col-left"><strong>${r.nama||'-'}</strong></td>
+              <td style="font-family:monospace;">${r.nim||'-'}</td>
+              <td>${r.kelas||'-'}</td>
+              <td class="col-left">${sub?`${sub.icon} ${sub.title}`:r.subjectId}</td>
+              <td style="color:#10B981;font-weight:700;">${r.correct}</td>
+              <td style="color:#EF4444;font-weight:700;">${r.total-r.correct}</td>
+              <td style="font-size:12px;color:var(--text-muted);">⏱️ ${r.timeStr||'-'}</td>
+              <td><span class="score-pill" style="background:${grade.color}20;color:${grade.color};font-weight:800;">${r.score}%</span></td>
+              <td><span style="background:${grade.color};color:white;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;">${grade.label}</span></td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -465,6 +482,17 @@ function renderLeaderboard() {
             ${subjectOptions}
           </select>
         </div>
+        <div class="filter-group">
+          <label class="filter-label">🏅 Grade</label>
+          <select id="lb-grade-filter" class="filter-select" style="min-width:130px;" onchange="applyLbFilter()">
+            <option value="all">— Semua Grade —</option>
+            <option value="A">Grade A</option>
+            <option value="B">Grade B</option>
+            <option value="C">Grade C</option>
+            <option value="D">Grade D</option>
+            <option value="E">Grade E</option>
+          </select>
+        </div>
         <div class="filter-group" style="flex:1;">
           <label class="filter-label">🔍 Cari</label>
           <div style="display:flex;gap:8px;">
@@ -483,18 +511,21 @@ function renderLeaderboard() {
     </div>
     <div id="lb-table-wrap"></div>`;
   document.getElementById('lb-subject-filter').value=STATE.lbFilter.subject;
+  document.getElementById('lb-grade-filter').value=STATE.lbFilter.grade||'all';
   document.getElementById('lb-search').value=STATE.lbFilter.search;
   applyLbFilter();
 }
 
 function applyLbFilter() {
   STATE.lbFilter.subject=document.getElementById('lb-subject-filter').value;
+  STATE.lbFilter.grade=document.getElementById('lb-grade-filter').value;
   STATE.lbFilter.search=document.getElementById('lb-search').value.trim().toLowerCase();
   renderLbTable();
 }
 function clearLbFilter() {
-  STATE.lbFilter={subject:'all',search:''};
+  STATE.lbFilter={subject:'all',grade:'all',search:''};
   document.getElementById('lb-subject-filter').value='all';
+  document.getElementById('lb-grade-filter').value='all';
   document.getElementById('lb-search').value='';
   renderLbTable();
 }
@@ -510,17 +541,18 @@ function getFilteredLb() {
   return Object.values(bestMap)
     .filter(r=>{
       const matchSubject=STATE.lbFilter.subject==='all'||r.subjectId===STATE.lbFilter.subject;
-      const s=STATE.lbFilter.search;
-      if(!s) return matchSubject;
-      const sub=SHEETS_CONFIG[r.subjectId];
       const grade=getGrade(r.score);
+      const matchGrade = !STATE.lbFilter.grade || STATE.lbFilter.grade==='all' || grade.label===STATE.lbFilter.grade;
+      const s=STATE.lbFilter.search;
+      if(!s) return matchSubject && matchGrade;
+      const sub=SHEETS_CONFIG[r.subjectId];
       const haystack=[
         r.nama, r.nim, r.kelas, sub?sub.title:r.subjectTitle, r.subjectTitle,
-        String(r.correct), String(r.total), `${r.correct}/${r.total}`, String(r.score)+'%', String(r.score),
-        grade.label, new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),
+        String(r.correct), String(r.total-r.correct), String(r.total), `${r.correct}/${r.total}`, String(r.score)+'%', String(r.score),
+        grade.label, r.timeStr||'', new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),
         new Date(r.date).toLocaleDateString('id-ID')
       ].filter(Boolean).join(' ').toLowerCase();
-      return matchSubject&&haystack.includes(s);
+      return matchSubject&&matchGrade&&haystack.includes(s);
     })
     .sort((a,b)=>b.score-a.score);
 }
@@ -538,17 +570,19 @@ function renderLbTable() {
   wrap.innerHTML=`
     <div class="result-count-text">🏆 Menampilkan <strong>${filtered.length}</strong> hasil ${STATE.lbFilter.search?'untuk pencarian "'+STATE.lbFilter.search+'"':''}</div>
     <div class="nilai-table-container" id="lb-printable">
-      <table class="data-table">
+      <table class="data-table data-table-center">
         <thead>
           <tr>
-            <th style="text-align:center;">Rank</th>
-            <th>Nama</th>
+            <th>Rank</th>
+            <th class="col-left">Nama</th>
             <th>NIM</th>
             <th>Kelas</th>
-            <th>Mata Kuliah</th>
-            <th style="text-align:center;">Benar</th>
-            <th style="text-align:center;">Nilai</th>
-            <th style="text-align:center;">Grade</th>
+            <th class="col-left">Mata Kuliah</th>
+            <th>Benar</th>
+            <th>Salah</th>
+            <th>Waktu</th>
+            <th>Nilai</th>
+            <th>Grade</th>
             <th>Tanggal</th>
           </tr>
         </thead>
@@ -557,14 +591,16 @@ function renderLbTable() {
             const sub=SHEETS_CONFIG[r.subjectId], grade=getGrade(r.score);
             const rankIcon=i<3?medals[i]:`#${i+1}`;
             return`<tr class="${i<3?'top-rank':''}">
-              <td style="text-align:center;font-size:18px;">${rankIcon}</td>
-              <td><div style="display:flex;align-items:center;gap:10px;"><div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:white;">${(r.nama||'?').charAt(0).toUpperCase()}</div><strong>${r.nama||'-'}</strong></div></td>
-              <td style="font-family:monospace;font-size:12px;">${r.nim||'-'}</td>
-              <td style="text-align:center;">${r.kelas||'-'}</td>
-              <td>${sub?`${sub.icon} ${sub.title}`:r.subjectId}</td>
-              <td style="text-align:center;color:#10B981;font-weight:700;">${r.correct}/${r.total}</td>
-              <td style="text-align:center;"><span class="score-pill" style="background:${grade.color}20;color:${grade.color};font-weight:800;">${r.score}%</span></td>
-              <td style="text-align:center;"><span style="background:${grade.color};color:white;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;">${grade.label}</span></td>
+              <td style="font-size:18px;">${rankIcon}</td>
+              <td class="col-left"><div style="display:flex;align-items:center;gap:10px;"><div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:white;">${(r.nama||'?').charAt(0).toUpperCase()}</div><strong>${r.nama||'-'}</strong></div></td>
+              <td style="font-family:monospace;">${r.nim||'-'}</td>
+              <td>${r.kelas||'-'}</td>
+              <td class="col-left">${sub?`${sub.icon} ${sub.title}`:r.subjectId}</td>
+              <td style="color:#10B981;font-weight:700;">${r.correct}</td>
+              <td style="color:#EF4444;font-weight:700;">${r.total-r.correct}</td>
+              <td style="font-size:12px;color:var(--text-muted);">⏱️ ${r.timeStr||'-'}</td>
+              <td><span class="score-pill" style="background:${grade.color}20;color:${grade.color};font-weight:800;">${r.score}%</span></td>
+              <td><span style="background:${grade.color};color:white;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;">${grade.label}</span></td>
               <td style="font-size:12px;color:var(--text-muted);">${new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</td>
             </tr>`;
           }).join('')}
@@ -619,12 +655,12 @@ function exportToExcelReal(rows, headers, filename, sheetName) {
 function exportNilaiExcel() {
   const filtered = getFilteredNilai();
   if (!filtered.length) { showToast('⚠️ Tidak ada data untuk diexport', 'warning'); return; }
-  const headers = ['No','Tanggal','Nama','NIM','Kelas','Mata Kuliah','Benar','Salah','Total Soal','Nilai (%)','Grade'];
+  const headers = ['No','Tanggal','Nama','NIM','Kelas','Mata Kuliah','Benar','Salah','Total Soal','Waktu Pengerjaan','Nilai (%)','Grade'];
   const rows = filtered.map((r,i) => {
     const sub = SHEETS_CONFIG[r.subjectId];
     const grade = getGrade(r.score);
     return [i+1, new Date(r.date).toLocaleDateString('id-ID'), r.nama||'-', r.nim||'-', r.kelas||'-',
-      sub?sub.title:(r.subjectTitle||r.subjectId), r.correct, r.total-r.correct, r.total, r.score, grade.label];
+      sub?sub.title:(r.subjectTitle||r.subjectId), r.correct, r.total-r.correct, r.total, r.timeStr||'-', r.score, grade.label];
   });
   exportToExcelReal(rows, headers, 'Nilai_Kuis_AdminBiz_'+new Date().toLocaleDateString('id-ID').replace(/\//g,'-'), 'Nilai Kuis');
 }
@@ -632,12 +668,12 @@ function exportNilaiExcel() {
 function exportLbExcel() {
   const filtered = getFilteredLb();
   if (!filtered.length) { showToast('⚠️ Tidak ada data untuk diexport', 'warning'); return; }
-  const headers = ['Rank','Nama','NIM','Kelas','Mata Kuliah','Benar','Total Soal','Nilai (%)','Grade','Tanggal'];
+  const headers = ['Rank','Nama','NIM','Kelas','Mata Kuliah','Benar','Salah','Total Soal','Waktu Pengerjaan','Nilai (%)','Grade','Tanggal'];
   const rows = filtered.map((r,i) => {
     const sub = SHEETS_CONFIG[r.subjectId];
     const grade = getGrade(r.score);
     return [i+1, r.nama||'-', r.nim||'-', r.kelas||'-', sub?sub.title:(r.subjectTitle||r.subjectId),
-      r.correct, r.total, r.score, grade.label, new Date(r.date).toLocaleDateString('id-ID')];
+      r.correct, r.total-r.correct, r.total, r.timeStr||'-', r.score, grade.label, new Date(r.date).toLocaleDateString('id-ID')];
   });
   exportToExcelReal(rows, headers, 'Leaderboard_AdminBiz_'+new Date().toLocaleDateString('id-ID').replace(/\//g,'-'), 'Leaderboard');
 }
@@ -747,7 +783,7 @@ function printNilai() {
   const filtered = getFilteredNilai();
   if (!filtered.length) { showToast('⚠️ Tidak ada data untuk diexport', 'warning'); return; }
 
-  const headers = ['No','Tanggal','Nama','NIM','Kelas','Mata Kuliah','Benar','Salah','Nilai','Grade'];
+  const headers = ['No','Tanggal','Nama','NIM','Kelas','Mata Kuliah','Benar','Salah','Waktu','Nilai','Grade'];
   const rows = filtered.map((r,i) => {
     const sub = SHEETS_CONFIG[r.subjectId];
     const grade = getGrade(r.score);
@@ -755,6 +791,7 @@ function printNilai() {
       `<strong>${r.nama||'-'}</strong>`, r.nim||'-', r.kelas||'-', sub?`${sub.icon} ${sub.title}`:(r.subjectTitle||r.subjectId),
       `<span style="color:#059669;font-weight:700;">${r.correct}</span>`,
       `<span style="color:#E11D48;font-weight:700;">${r.total-r.correct}</span>`,
+      r.timeStr||'-',
       `<strong style="color:${grade.color};">${r.score}%</strong>`,
       `<span style="background:${grade.color};color:white;padding:2px 8px;border-radius:5px;font-weight:700;font-size:9px;">${grade.label}</span>`];
   });
@@ -780,12 +817,15 @@ function printLb() {
   if (!filtered.length) { showToast('⚠️ Tidak ada data untuk diexport', 'warning'); return; }
 
   const medals = ['🥇','🥈','🥉'];
-  const headers = ['Rank','Nama','NIM','Kelas','Mata Kuliah','Benar','Nilai','Grade','Tanggal'];
+  const headers = ['Rank','Nama','NIM','Kelas','Mata Kuliah','Benar','Salah','Waktu','Nilai','Grade','Tanggal'];
   const rows = filtered.map((r,i) => {
     const sub = SHEETS_CONFIG[r.subjectId];
     const grade = getGrade(r.score);
     return [i<3?medals[i]:`#${i+1}`, `<strong>${r.nama||'-'}</strong>`, r.nim||'-', r.kelas||'-',
-      sub?`${sub.icon} ${sub.title}`:(r.subjectTitle||r.subjectId), `${r.correct}/${r.total}`,
+      sub?`${sub.icon} ${sub.title}`:(r.subjectTitle||r.subjectId),
+      `<span style="color:#059669;font-weight:700;">${r.correct}</span>`,
+      `<span style="color:#E11D48;font-weight:700;">${r.total-r.correct}</span>`,
+      r.timeStr||'-',
       `<strong style="color:${grade.color};">${r.score}%</strong>`,
       `<span style="background:${grade.color};color:white;padding:2px 8px;border-radius:5px;font-weight:700;font-size:9px;">${grade.label}</span>`,
       new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})];
