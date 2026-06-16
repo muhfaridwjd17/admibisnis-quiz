@@ -1019,3 +1019,22 @@ body {
   text-align: left;
 }
 .data-table-center thead th { vertical-align: middle; }
+
+/* ==================== TOMBOL HAPUS PER-BARIS ==================== */
+.btn-row-delete {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px; transition: var(--trans-fast);
+  border: 1.5px solid rgba(239,68,68,0.25);
+  background: rgba(239,68,68,0.08);
+}
+.btn-row-delete:hover {
+  background: rgba(239,68,68,0.18);
+  border-color: rgba(239,68,68,0.4);
+  transform: scale(1.08);
+}
+.btn-row-delete:active { transform: scale(0.95); }
+
+@media print {
+  .no-print { display: none !important; }
+}
