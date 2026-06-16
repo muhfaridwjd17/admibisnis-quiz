@@ -813,3 +813,198 @@ body {
 .gap-12 { gap: 12px; }
 .gap-8 { gap: 8px; }
 .mb-8 { margin-bottom: 8px; }
+
+/* ====================================================
+   POLISH PASS — Garis tepi lebih jelas, card & table
+   lebih premium, di kedua mode
+   ==================================================== */
+
+/* ---- Garis tepi lebih tegas untuk semua input/button ---- */
+.filter-select, .filter-input {
+  border-width: 1.5px !important;
+}
+[data-theme="dark"] .filter-select, [data-theme="dark"] .filter-input {
+  border-color: rgba(251,191,36,0.18) !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+}
+[data-theme="dark"] .filter-select:hover, [data-theme="dark"] .filter-input:hover {
+  border-color: rgba(251,191,36,0.35) !important;
+}
+[data-theme="dark"] .filter-select:focus, [data-theme="dark"] .filter-input:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(251,191,36,0.1), inset 0 1px 2px rgba(0,0,0,0.2);
+}
+[data-theme="light"] .filter-select, [data-theme="light"] .filter-input {
+  border-color: rgba(249,115,22,0.25) !important;
+  box-shadow: inset 0 1px 3px rgba(249,115,22,0.04);
+}
+[data-theme="light"] .filter-select:hover, [data-theme="light"] .filter-input:hover {
+  border-color: rgba(249,115,22,0.4) !important;
+}
+[data-theme="light"] .filter-select:focus, [data-theme="light"] .filter-input:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(249,115,22,0.12);
+}
+
+/* ---- Tombol dengan border lebih jelas dan depth ---- */
+.btn-filter {
+  border: 1.5px solid transparent !important;
+  box-shadow: 0 3px 10px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+}
+.btn-filter:active { transform: translateY(0) scale(0.98); }
+
+.btn-filter-clear {
+  border-width: 1.5px !important;
+}
+[data-theme="dark"] .btn-filter-clear { border-color: rgba(255,255,255,0.12) !important; }
+[data-theme="light"] .btn-filter-clear { border-color: rgba(249,115,22,0.2) !important; }
+[data-theme="dark"] .btn-filter-clear:hover { border-color: rgba(255,255,255,0.25) !important; }
+[data-theme="light"] .btn-filter-clear:hover { border-color: rgba(249,115,22,0.4) !important; background: #FFF1E6; }
+
+.btn-export {
+  border-width: 1.5px !important;
+  position: relative;
+}
+.btn-export.excel { box-shadow: 0 2px 8px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.1); }
+.btn-export.pdf { box-shadow: 0 2px 8px rgba(239,68,68,0.12), inset 0 1px 0 rgba(255,255,255,0.1); }
+.btn-export.print { box-shadow: 0 2px 8px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.1); }
+.btn-export:active { transform: scale(0.97); }
+
+.btn-icon { border-width: 1.5px !important; }
+.btn {
+  border: 1.5px solid transparent;
+}
+.btn-secondary { border-width: 1.5px !important; }
+.btn-ghost { border: 1.5px solid transparent !important; }
+[data-theme="dark"] .btn-ghost:hover { border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="light"] .btn-ghost:hover { border-color: rgba(249,115,22,0.12) !important; }
+
+/* ---- Filter bar wrap dengan border lebih jelas ---- */
+[data-theme="dark"] .filter-bar-wrap {
+  border-width: 1.5px !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.02);
+}
+[data-theme="light"] .filter-bar-wrap {
+  border-width: 1.5px !important;
+  border-color: rgba(249,115,22,0.15) !important;
+  box-shadow: 0 6px 24px rgba(249,115,22,0.08), inset 0 1px 0 white;
+}
+
+/* ---- Card upgrade: border lebih jelas + depth 3D ---- */
+[data-theme="dark"] .card {
+  border-width: 1.5px !important;
+  border-color: rgba(255,255,255,0.07) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.02);
+}
+[data-theme="dark"] .card:hover {
+  border-color: rgba(251,191,36,0.2) !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.4), 0 0 0 1px rgba(251,191,36,0.05);
+}
+[data-theme="light"] .card {
+  border-width: 1.5px !important;
+  border-color: rgba(249,115,22,0.14) !important;
+  box-shadow: 0 6px 20px rgba(249,115,22,0.08), inset 0 1px 0 white;
+}
+[data-theme="light"] .card:hover {
+  border-color: rgba(249,115,22,0.28) !important;
+  box-shadow: 0 10px 32px rgba(249,115,22,0.14);
+  transform: translateY(-2px);
+}
+
+[data-theme="dark"] .subject-card { border-width: 1.5px !important; border-color: rgba(255,255,255,0.07) !important; }
+[data-theme="dark"] .subject-card:hover { border-color: rgba(255,255,255,0.15) !important; }
+[data-theme="light"] .subject-card { border-width: 1.5px !important; }
+
+[data-theme="dark"] .stat-card { border-width: 1.5px !important; border-color: rgba(255,255,255,0.06) !important; }
+[data-theme="light"] .stat-card { border-width: 1.5px !important; }
+
+[data-theme="dark"] .materi-card { border-width: 1.5px !important; border-color: rgba(255,255,255,0.07) !important; }
+[data-theme="light"] .materi-card { border-width: 1.5px !important; }
+
+[data-theme="dark"] .question-card { border-width: 1.5px !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="light"] .question-card { border-width: 1.5px !important; }
+
+[data-theme="dark"] .result-card-v2 { border-width: 1.5px !important; }
+[data-theme="light"] .result-card-v2 { border-width: 1.5px !important; }
+
+/* ---- Tabel upgrade: border lebih jelas, header lebih kontras, zebra rows ---- */
+[data-theme="dark"] .nilai-table-container {
+  border-width: 1.5px !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+[data-theme="light"] .nilai-table-container {
+  border-width: 1.5px !important;
+  border-color: rgba(249,115,22,0.15) !important;
+  box-shadow: 0 8px 28px rgba(249,115,22,0.1);
+}
+
+[data-theme="dark"] .data-table th {
+  border-bottom-width: 2px !important;
+  border-bottom-color: rgba(251,191,36,0.25) !important;
+}
+[data-theme="light"] .data-table th {
+  border-bottom-width: 2px !important;
+  border-bottom-color: rgba(249,115,22,0.3) !important;
+}
+
+.data-table tbody tr:nth-child(even) td {
+  background: var(--bg-glass);
+}
+[data-theme="dark"] .data-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+[data-theme="light"] .data-table tbody tr:nth-child(even) td { background: #FFFBF5; }
+
+.data-table tbody tr { border-left: 2px solid transparent; transition: var(--trans-fast); }
+[data-theme="dark"] .data-table tbody tr:hover { border-left-color: var(--accent); background: rgba(251,191,36,0.04) !important; }
+[data-theme="light"] .data-table tbody tr:hover { border-left-color: var(--accent); background: #FFF1E0 !important; }
+.data-table tbody tr:hover td { background: transparent !important; }
+
+[data-theme="dark"] .data-table tbody tr.top-rank { background: rgba(251,191,36,0.06) !important; }
+[data-theme="light"] .data-table tbody tr.top-rank { background: linear-gradient(90deg, #FEF3C7, transparent) !important; }
+
+/* ---- Leaderboard table di dashboard juga upgrade ---- */
+[data-theme="dark"] .leaderboard-table { border-width: 1.5px !important; border-color: rgba(255,255,255,0.07) !important; }
+[data-theme="light"] .leaderboard-table { border-width: 1.5px !important; border-color: rgba(249,115,22,0.13) !important; }
+.lb-row { border-left: 2px solid transparent; }
+[data-theme="dark"] .lb-row:hover { border-left-color: var(--accent); }
+[data-theme="light"] .lb-row:hover { border-left-color: var(--accent); }
+
+/* ---- Modal identitas: border lebih jelas ---- */
+[data-theme="dark"] #modal-identitas > div { border-width: 1.5px !important; }
+[data-theme="light"] #modal-identitas > div { border-width: 1.5px !important; }
+[data-theme="dark"] #modal-identitas input {
+  border-width: 1.5px !important; border-color: rgba(255,255,255,0.1) !important;
+}
+[data-theme="light"] #modal-identitas input {
+  border-width: 1.5px !important; border-color: rgba(249,115,22,0.2) !important;
+}
+
+/* ---- Score pill upgrade ---- */
+.score-pill { border: 1px solid currentColor; opacity: 0.95; }
+
+/* ---- Option button (quiz) border upgrade ---- */
+.option-btn { border-width: 1.5px !important; }
+
+/* ---- Empty state card ---- */
+.empty-state { border-radius: var(--radius-lg); }
+
+/* ---- Result stat cards border ---- */
+[data-theme="dark"] .result-stat-v2 { border-width: 1.5px !important; }
+[data-theme="light"] .result-stat-v2 { border-width: 1.5px !important; }
+[data-theme="dark"] .result-identity-bar { border-width: 1.5px !important; }
+[data-theme="light"] .result-identity-bar { border-width: 1.5px !important; }
+
+/* ---- Result count text ---- */
+.result-count-text {
+  font-size: 12px; color: var(--text-muted); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.result-count-text strong { color: var(--text-primary); font-weight: 800; }
+
+/* ---- Sidebar nav item border ---- */
+.nav-item { border-width: 1.5px !important; }
+
+/* ---- Topbar bottom border thicker ---- */
+[data-theme="dark"] .topbar { border-bottom-width: 1.5px !important; }
+[data-theme="light"] .topbar { border-bottom-width: 1.5px !important; }
