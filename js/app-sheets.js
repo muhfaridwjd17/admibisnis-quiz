@@ -333,7 +333,7 @@ function renderSubjectProgress() {
 function renderKuisPage() {
   updateTopbar('Pilih Kuis','Pilih mata kuliah untuk memulai kuis');
   const grid=document.getElementById('subjects-grid');if(!grid)return;
-  grid.innerHTML=Object.entries(SHEETS_CONFIG).map(([id,sub])=>{const attempts=STATE.history.filter(h=>h.subjectId===id),best=attempts.length>0?Math.max(...attempts.map(h=>h.score)):0;return`<div class="subject-card" onclick="startQuiz('${id}')" style="--color-accent:${sub.color}"><div class="subject-icon-wrap" style="background:${sub.color}20;border:1px solid ${sub.color}30;"><span>${sub.icon}</span></div><div class="subject-score-bar"><div class="subject-score-fill" style="width:${best}%;background:${sub.color};"></div></div><div class="subject-title">${sub.title}</div><div class="subject-desc">10 Soal · 2 menit per soal · ${attempts.length} percobaan</div><div class="subject-meta"><div class="subject-meta-info"><span>⏱️</span><span>2 menit/soal</span></div><div class="subject-arrow" style="background:${sub.color}20;color:${sub.color};">→</div></div></div>`;}).join('');
+  grid.innerHTML=Object.entries(SHEETS_CONFIG).map(([id,sub])=>{const attempts=STATE.history.filter(h=>h.subjectId===id),best=attempts.length>0?Math.max(...attempts.map(h=>h.score)):0;return`<div class="subject-card" onclick="startQuiz('${id}')" style="--card-color:${sub.color}"><div class="subject-icon-wrap" style="background:${sub.color}20;border:1px solid ${sub.color}30;"><span>${sub.icon}</span></div><div class="subject-score-bar"><div class="subject-score-fill" style="width:${best}%;background:${sub.color};"></div></div><div class="subject-title">${sub.title}</div><div class="subject-desc">10 Soal · 2 menit per soal · ${attempts.length} percobaan</div><div class="subject-meta"><div class="subject-meta-info"><span>⏱️</span><span>2 menit/soal</span></div><div class="subject-arrow" style="background:${sub.color}20;color:${sub.color};">→</div></div></div>`;}).join('');
 }
 
 // ==================== NILAI PAGE ====================
@@ -342,29 +342,29 @@ function renderNilaiPage() {
   const container=document.getElementById('nilai-content');if(!container)return;
   const subjectOptions=Object.entries(SHEETS_CONFIG).map(([id,sub])=>`<option value="${id}">${sub.icon} ${sub.title}</option>`).join('');
   container.innerHTML=`
-    <div style="background:var(--bg-glass);border:1px solid var(--border-subtle);border-radius:16px;padding:20px 24px;margin-bottom:24px;display:flex;flex-direction:column;gap:16px;">
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);">📚 Mata Kuliah</label>
-          <select id="nilai-subject-filter" onchange="applyNilaiFilter()" style="padding:10px 14px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-primary);font-size:13px;font-family:inherit;cursor:pointer;outline:none;min-width:240px;">
+    <div class="filter-bar-wrap">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label class="filter-label">📚 Mata Kuliah</label>
+          <select id="nilai-subject-filter" class="filter-select" onchange="applyNilaiFilter()">
             <option value="all">— Semua Mata Kuliah —</option>
             ${subjectOptions}
           </select>
         </div>
-        <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">
-          <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);">🔍 Cari</label>
+        <div class="filter-group" style="flex:1;">
+          <label class="filter-label">🔍 Cari</label>
           <div style="display:flex;gap:8px;">
-            <input type="text" id="nilai-search" placeholder="Cari nama, NIM, atau kelas..." onkeydown="if(event.key===\'Enter\')applyNilaiFilter()" style="flex:1;padding:10px 14px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;">
-            <button onclick="applyNilaiFilter()" style="padding:10px 20px;background:linear-gradient(135deg,#6366F1,#8B5CF6);border:none;border-radius:10px;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">🔍 Filter</button>
-            <button onclick="clearNilaiFilter()" style="padding:10px 16px;background:var(--bg-glass);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">✕ Reset</button>
+            <input type="text" id="nilai-search" class="filter-input" placeholder="Cari nama, NIM, atau kelas..." onkeydown="if(event.key===\'Enter\')applyNilaiFilter()">
+            <button class="btn-filter" onclick="applyNilaiFilter()">🔍 Filter</button>
+            <button class="btn-filter-clear" onclick="clearNilaiFilter()">✕ Reset</button>
           </div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border-subtle);flex-wrap:wrap;align-items:center;">
-        <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-right:4px;">📤 Export:</span>
-        <button onclick="exportNilaiExcel()" style="padding:8px 16px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:8px;color:#10B981;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📊 Excel</button>
-        <button onclick="exportNilaiPDF()" style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;color:#EF4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📄 PDF</button>
-        <button onclick="printNilai()" style="padding:8px 16px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:8px;color:#6366F1;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🖨️ Print</button>
+      <div class="export-row">
+        <span class="export-label">📤 Export</span>
+        <button class="btn-export excel" onclick="exportNilaiExcel()">📊 Excel</button>
+        <button class="btn-export pdf" onclick="exportNilaiPDF()">📄 PDF</button>
+        <button class="btn-export print" onclick="printNilai()">🖨️ Print</button>
       </div>
     </div>
     <div id="nilai-table-wrap"></div>`;
@@ -448,29 +448,29 @@ function renderLeaderboard() {
   const container=document.getElementById('lb-content');if(!container)return;
   const subjectOptions=Object.entries(SHEETS_CONFIG).map(([id,sub])=>`<option value="${id}">${sub.icon} ${sub.title}</option>`).join('');
   container.innerHTML=`
-    <div style="background:var(--bg-glass);border:1px solid var(--border-subtle);border-radius:16px;padding:20px 24px;margin-bottom:24px;display:flex;flex-direction:column;gap:16px;">
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);">📚 Mata Kuliah</label>
-          <select id="lb-subject-filter" onchange="applyLbFilter()" style="padding:10px 14px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-primary);font-size:13px;font-family:inherit;cursor:pointer;outline:none;min-width:240px;">
+    <div class="filter-bar-wrap">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label class="filter-label">📚 Mata Kuliah</label>
+          <select id="lb-subject-filter" class="filter-select" onchange="applyLbFilter()">
             <option value="all">— Semua Mata Kuliah —</option>
             ${subjectOptions}
           </select>
         </div>
-        <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">
-          <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);">🔍 Cari</label>
+        <div class="filter-group" style="flex:1;">
+          <label class="filter-label">🔍 Cari</label>
           <div style="display:flex;gap:8px;">
-            <input type="text" id="lb-search" placeholder="Cari nama, NIM, atau kelas..." onkeydown="if(event.key===\'Enter\')applyLbFilter()" style="flex:1;padding:10px 14px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;">
-            <button onclick="applyLbFilter()" style="padding:10px 20px;background:linear-gradient(135deg,#6366F1,#8B5CF6);border:none;border-radius:10px;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">🔍 Filter</button>
-            <button onclick="clearLbFilter()" style="padding:10px 16px;background:var(--bg-glass);border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">✕ Reset</button>
+            <input type="text" id="lb-search" class="filter-input" placeholder="Cari nama, NIM, atau kelas..." onkeydown="if(event.key===\'Enter\')applyLbFilter()">
+            <button class="btn-filter" onclick="applyLbFilter()">🔍 Filter</button>
+            <button class="btn-filter-clear" onclick="clearLbFilter()">✕ Reset</button>
           </div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border-subtle);flex-wrap:wrap;align-items:center;">
-        <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-right:4px;">📤 Export:</span>
-        <button onclick="exportLbExcel()" style="padding:8px 16px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:8px;color:#10B981;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📊 Excel</button>
-        <button onclick="exportLbPDF()" style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;color:#EF4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📄 PDF</button>
-        <button onclick="printLb()" style="padding:8px 16px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:8px;color:#6366F1;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🖨️ Print</button>
+      <div class="export-row">
+        <span class="export-label">📤 Export</span>
+        <button class="btn-export excel" onclick="exportLbExcel()">📊 Excel</button>
+        <button class="btn-export pdf" onclick="exportLbPDF()">📄 PDF</button>
+        <button class="btn-export print" onclick="printLb()">🖨️ Print</button>
       </div>
     </div>
     <div id="lb-table-wrap"></div>`;
