@@ -1008,3 +1008,14 @@ body {
 /* ---- Topbar bottom border thicker ---- */
 [data-theme="dark"] .topbar { border-bottom-width: 1.5px !important; }
 [data-theme="light"] .topbar { border-bottom-width: 1.5px !important; }
+
+/* ==================== TABLE: CENTER ALIGNMENT KONSISTEN ==================== */
+.data-table-center th,
+.data-table-center td {
+  text-align: center;
+}
+.data-table-center th.col-left,
+.data-table-center td.col-left {
+  text-align: left;
+}
+.data-table-center thead th { vertical-align: middle; }
