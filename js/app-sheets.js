@@ -8,8 +8,12 @@ const STATE = {
   soalTimer: null,
   soalTimeLeft: 120,
   history: JSON.parse(localStorage.getItem('quiz_history') || '[]'),
+  remoteHistory: [],
+  remoteLoaded: false,
   currentIdentity: null,
   loadedQuestions: {},
+  cheatCount: 0,
+  quizActive: false,
   nilaiFilter: { subject: 'all', search: '' },
   lbFilter: { subject: 'all', search: '' }
 };
@@ -24,6 +28,7 @@ async function kirimHasilKeSheets(data) {
 function hapusSatuNilai(recordId) {
   if (!confirm('Hapus data ini secara permanen? Data juga akan terhapus dari Google Sheets.')) return;
   STATE.history = STATE.history.filter(r => r.recordId !== recordId);
+  STATE.remoteHistory = STATE.remoteHistory.filter(r => r.recordId !== recordId);
   localStorage.setItem('quiz_history', JSON.stringify(STATE.history));
   kirimHasilKeSheets({ action: 'delete', recordId });
   showToast('🗑️ Data berhasil dihapus', 'warning');
@@ -110,6 +115,8 @@ async function doStartQuiz(subjectId) {
     STATE.currentSubject={id:subjectId,...sub,questions};
     STATE.currentQuestion=0;
     STATE.answers=new Array(questions.length).fill(null);
+    STATE.cheatCount=0;
+    STATE.quizActive=true;
     hideQuizLoading();
     renderQuestion();
     startSoalTimer();
@@ -163,14 +170,12 @@ function updateTimerDisplay() {
   if(fill){fill.style.width=pct+'%';fill.className='soal-timer-fill';if(pct<50)fill.classList.add('warn');if(pct<20)fill.classList.add('danger');}
 }
 function autoNextSoal() {
-  STATE.totalSoalTime = (STATE.totalSoalTime || 0) + 120;
   showToast('⏰ Waktu habis! Lanjut ke soal berikutnya.','warning');
   const qIdx=STATE.currentQuestion;
   if(STATE.answers[qIdx]===null) STATE.answers[qIdx]=-1;
-  const q=STATE.currentSubject.questions[qIdx];
-  document.querySelectorAll('.option-btn').forEach((btn,i)=>{btn.disabled=true;if(i===q.answer)btn.classList.add('correct');});
+  document.querySelectorAll('.option-btn').forEach(btn=>btn.disabled=true);
   const bn=document.getElementById('btn-next');if(bn)bn.disabled=false;
-  setTimeout(()=>nextQuestion(),1500);
+  setTimeout(()=>nextQuestion(),1200);
 }
 function stopSoalTimer(){clearInterval(STATE.soalTimer);}
 
@@ -186,26 +191,31 @@ function renderQuestion() {
   if(g('question-text'))g('question-text').textContent=q.q;
   const letters=['A','B','C','D'];
   const oc=g('options-container');
-  if(oc)oc.innerHTML=q.options.map((opt,i)=>`<button class="option-btn ${STATE.answers[qIdx]===i?'selected':''}" onclick="selectOption(${i})" ${STATE.answers[qIdx]!==null?'disabled':''}><span class="option-letter">${letters[i]}</span><span>${opt}</span></button>`).join('');
+  if(oc)oc.innerHTML=q.options.map((opt,i)=>`<button class="option-btn ${STATE.answers[qIdx]===i?'selected':''}" onclick="selectOption(${i})"><span class="option-letter">${letters[i]}</span><span>${opt}</span></button>`).join('');
   const bp=g('btn-prev');if(bp)bp.style.display=qIdx===0?'none':'flex';
   const bn=g('btn-next');if(bn){bn.textContent=qIdx===total-1?'🏁 Selesai':'Selanjutnya →';bn.disabled=STATE.answers[qIdx]===null;}
   startSoalTimer();
 }
 function selectOption(optIdx) {
+  const qIdx=STATE.currentQuestion;
+  // Boleh ganti jawaban berkali-kali sebelum lanjut ke soal berikutnya — tidak ada feedback benar/salah di sini
+  STATE.answers[qIdx]=optIdx;
+  document.querySelectorAll('.option-btn').forEach((btn,i)=>{btn.classList.toggle('selected', i===optIdx);});
+  const bn=document.getElementById('btn-next');if(bn)bn.disabled=false;
+}
+function nextQuestion(){
+  stopSoalTimer();
+  const qIdx=STATE.currentQuestion;
   const timeUsedThisSoal = 120 - STATE.soalTimeLeft;
   STATE.totalSoalTime = (STATE.totalSoalTime || 0) + timeUsedThisSoal;
-  stopSoalTimer();
-  const qIdx=STATE.currentQuestion, q=STATE.currentSubject.questions[qIdx];
-  STATE.answers[qIdx]=optIdx;
-  document.querySelectorAll('.option-btn').forEach((btn,i)=>{btn.disabled=true;if(i===q.answer)btn.classList.add('correct');else if(i===optIdx&&optIdx!==q.answer)btn.classList.add('wrong');});
-  const bn=document.getElementById('btn-next');if(bn)bn.disabled=false;
-  showToast(optIdx===q.answer?'✅ Jawaban benar!':'❌ Jawaban kurang tepat',optIdx===q.answer?'success':'error');
+  const sub=STATE.currentSubject;
+  if(STATE.currentQuestion<sub.questions.length-1){STATE.currentQuestion++;renderQuestion();}else finishQuiz();
 }
-function nextQuestion(){stopSoalTimer();const sub=STATE.currentSubject;if(STATE.currentQuestion<sub.questions.length-1){STATE.currentQuestion++;renderQuestion();}else finishQuiz();}
 function prevQuestion(){stopSoalTimer();if(STATE.currentQuestion>0){STATE.currentQuestion--;renderQuestion();}}
 
 function finishQuiz() {
   stopSoalTimer();
+  STATE.quizActive=false;
   const sub=STATE.currentSubject;
   const correct=sub.questions.filter((q,i)=>STATE.answers[i]===q.answer).length;
   const total=sub.questions.length, score=Math.round((correct/total)*100);
@@ -214,7 +224,8 @@ function finishQuiz() {
   const mm = Math.floor(totalSecs/60), ss = totalSecs%60;
   const timeStr = `${mm}m ${ss}s`;
   const recordId = Date.now()+'_'+Math.random().toString(36).slice(2);
-  const record={recordId,subjectId:sub.id,subjectTitle:sub.title,score,correct,total,nama:identity.nama,nim:identity.nim,kelas:identity.kelas,timeStr,date:new Date().toISOString()};
+  const cheatCount = STATE.cheatCount||0;
+  const record={recordId,subjectId:sub.id,subjectTitle:sub.title,score,correct,total,nama:identity.nama,nim:identity.nim,kelas:identity.kelas,timeStr,cheatCount,date:new Date().toISOString()};
   STATE.history.push(record);
   localStorage.setItem('quiz_history',JSON.stringify(STATE.history));
   kirimHasilKeSheets(record);
@@ -349,6 +360,62 @@ function renderKuisPage() {
 }
 
 // ==================== NILAI PAGE ====================
+// ==================== AMBIL DATA DARI GOOGLE SHEETS (SEMUA DEVICE/ORANG) ====================
+async function fetchRemoteHistory(forceRefresh) {
+  if (!APPS_SCRIPT_URL) return mergeHistory();
+  if (STATE.remoteLoaded && !forceRefresh) return mergeHistory();
+
+  const targetUrl = APPS_SCRIPT_URL + '?action=getAll';
+  const attempts = [
+    () => fetch(targetUrl, { signal: AbortSignal.timeout(8000) }),
+    () => fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(targetUrl), { signal: AbortSignal.timeout(8000) }),
+    () => fetch('https://corsproxy.io/?'+encodeURIComponent(targetUrl), { signal: AbortSignal.timeout(8000) })
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const res = await attempt();
+      if (!res.ok) continue;
+      const json = await res.json();
+      if (json.status === 'success' && Array.isArray(json.data)) {
+        STATE.remoteHistory = json.data.map(row => {
+          const cheatMatch = String(row.cheatLabel||'').match(/(\d+)x/);
+          return {
+            recordId: row.recordId,
+            subjectTitle: row.subjectTitle,
+            subjectId: findSubjectIdByTitle(row.subjectTitle),
+            nama: row.nama, nim: row.nim, kelas: row.kelas,
+            correct: Number(row.correct)||0, total: Number(row.total)||0,
+            score: Number(row.score)||0,
+            timeStr: '-',
+            cheatCount: cheatMatch ? Number(cheatMatch[1]) : 0,
+            date: row.tanggal ? String(row.tanggal) : new Date().toISOString()
+          };
+        });
+        STATE.remoteLoaded = true;
+        return mergeHistory();
+      }
+    } catch (e) { continue; }
+  }
+  console.warn('Gagal ambil data dari Sheets setelah semua percobaan');
+  return mergeHistory();
+}
+
+function findSubjectIdByTitle(title) {
+  for (const [id, sub] of Object.entries(SHEETS_CONFIG)) {
+    if (sub.title === title) return id;
+  }
+  return null;
+}
+
+function mergeHistory() {
+  // Gabungkan data lokal + remote, dedup berdasarkan recordId
+  const map = {};
+  STATE.remoteHistory.forEach(r => { if (r.recordId) map[r.recordId] = r; });
+  STATE.history.forEach(r => { if (r.recordId) map[r.recordId] = r; }); // lokal menang kalau ada duplikat recordId
+  return Object.values(map);
+}
+
 function renderNilaiPage() {
   updateTopbar('Nilai Saya','Riwayat dan rekap hasil kuis kamu');
   const container=document.getElementById('nilai-content');if(!container)return;
@@ -380,6 +447,7 @@ function renderNilaiPage() {
             <input type="text" id="nilai-search" class="filter-input" placeholder="Cari di semua kolom: nama, NIM, kelas, nilai, grade, tanggal..." onkeydown="if(event.key===\'Enter\')applyNilaiFilter()">
             <button class="btn-filter" onclick="applyNilaiFilter()">🔍 Filter</button>
             <button class="btn-filter-clear" onclick="clearNilaiFilter()">✕ Reset</button>
+            <button class="btn-filter-clear" onclick="refreshNilaiData()" title="Muat ulang data dari semua device">🔄</button>
           </div>
         </div>
       </div>
@@ -390,11 +458,16 @@ function renderNilaiPage() {
         <button class="btn-export print" onclick="printNilai()">🖨️ Print</button>
       </div>
     </div>
-    <div id="nilai-table-wrap"></div>`;
+    <div id="nilai-table-wrap"><div class="empty-state" style="padding:50px;"><div class="empty-state-icon">⏳</div><div class="empty-state-title">Memuat data dari semua device...</div></div></div>`;
   document.getElementById('nilai-subject-filter').value=STATE.nilaiFilter.subject;
   document.getElementById('nilai-grade-filter').value=STATE.nilaiFilter.grade||'all';
   document.getElementById('nilai-search').value=STATE.nilaiFilter.search;
-  applyNilaiFilter();
+  fetchRemoteHistory().then(()=>applyNilaiFilter());
+}
+
+function refreshNilaiData() {
+  showToast('🔄 Memuat ulang data...', 'info');
+  fetchRemoteHistory(true).then(()=>{ applyNilaiFilter(); showToast('✅ Data terbaru dimuat', 'success'); });
 }
 
 function applyNilaiFilter() {
@@ -412,7 +485,8 @@ function clearNilaiFilter() {
 }
 
 function getFilteredNilai() {
-  return [...STATE.history].reverse().filter(r=>{
+  const all = mergeHistory().sort((a,b)=> new Date(b.date) - new Date(a.date));
+  return all.filter(r=>{
     const matchSubject = STATE.nilaiFilter.subject==='all' || r.subjectId===STATE.nilaiFilter.subject;
     const grade=getGrade(r.score);
     const matchGrade = !STATE.nilaiFilter.grade || STATE.nilaiFilter.grade==='all' || grade.label===STATE.nilaiFilter.grade;
@@ -513,6 +587,7 @@ function renderLeaderboard() {
             <input type="text" id="lb-search" class="filter-input" placeholder="Cari di semua kolom: nama, NIM, kelas, nilai, grade, tanggal..." onkeydown="if(event.key===\'Enter\')applyLbFilter()">
             <button class="btn-filter" onclick="applyLbFilter()">🔍 Filter</button>
             <button class="btn-filter-clear" onclick="clearLbFilter()">✕ Reset</button>
+            <button class="btn-filter-clear" onclick="refreshLbData()" title="Muat ulang data dari semua device">🔄</button>
           </div>
         </div>
       </div>
@@ -523,11 +598,16 @@ function renderLeaderboard() {
         <button class="btn-export print" onclick="printLb()">🖨️ Print</button>
       </div>
     </div>
-    <div id="lb-table-wrap"></div>`;
+    <div id="lb-table-wrap"><div class="empty-state" style="padding:50px;"><div class="empty-state-icon">⏳</div><div class="empty-state-title">Memuat data dari semua device...</div></div></div>`;
   document.getElementById('lb-subject-filter').value=STATE.lbFilter.subject;
   document.getElementById('lb-grade-filter').value=STATE.lbFilter.grade||'all';
   document.getElementById('lb-search').value=STATE.lbFilter.search;
-  applyLbFilter();
+  fetchRemoteHistory().then(()=>applyLbFilter());
+}
+
+function refreshLbData() {
+  showToast('🔄 Memuat ulang data...', 'info');
+  fetchRemoteHistory(true).then(()=>{ applyLbFilter(); showToast('✅ Data terbaru dimuat', 'success'); });
 }
 
 function applyLbFilter() {
@@ -545,9 +625,9 @@ function clearLbFilter() {
 }
 
 function getFilteredLb() {
-  // Ambil nilai terbaik per orang per subject
+  // Ambil nilai terbaik per orang per subject, dari data lokal + Sheets
   const bestMap={};
-  STATE.history.forEach(r=>{
+  mergeHistory().forEach(r=>{
     const key=`${r.nim||r.nama}-${r.subjectId}`;
     if(!bestMap[key]||r.score>bestMap[key].score) bestMap[key]=r;
   });
@@ -904,6 +984,7 @@ function showToast(msg,type='info'){
 function clearHistory(){
   if(confirm('Yakin ingin menghapus semua riwayat kuis? Data di Google Sheets juga akan ikut terhapus.')){
     STATE.history=[];
+    STATE.remoteHistory=[];
     localStorage.removeItem('quiz_history');
     kirimHasilKeSheets({ action: 'deleteAll' });
     showToast('🗑️ Semua riwayat dihapus','warning');
@@ -913,6 +994,23 @@ function clearHistory(){
   }
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('open');}
+
+// ==================== DETEKSI KECURANGAN (PINDAH TAB / WINDOW) ====================
+let lastCheatTime = 0;
+function handleTabSwitch() {
+  if (!STATE.quizActive) return;
+  const now = Date.now();
+  if (now - lastCheatTime < 1000) return; // hindari hitung ganda dari event blur+visibilitychange
+  lastCheatTime = now;
+  STATE.cheatCount = (STATE.cheatCount || 0) + 1;
+  showToast(`⚠️ Terdeteksi pindah tab/jendela! (${STATE.cheatCount}x) — ini akan tercatat.`, 'warning');
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') handleTabSwitch();
+});
+window.addEventListener('blur', () => {
+  if (STATE.quizActive) handleTabSwitch();
+});
 
 document.addEventListener('DOMContentLoaded',()=>{
   initTheme();
