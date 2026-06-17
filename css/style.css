@@ -875,9 +875,11 @@ body {
   border: 1.5px solid transparent;
 }
 .btn-secondary { border-width: 1.5px !important; }
-.btn-ghost { border: 1.5px solid transparent !important; }
-[data-theme="dark"] .btn-ghost:hover { border-color: rgba(255,255,255,0.08) !important; }
-[data-theme="light"] .btn-ghost:hover { border-color: rgba(249,115,22,0.12) !important; }
+.btn-ghost { border-width: 1.5px !important; }
+[data-theme="dark"] .btn-ghost { border-color: rgba(255,255,255,0.1) !important; }
+[data-theme="light"] .btn-ghost { border-color: rgba(249,115,22,0.18) !important; }
+[data-theme="dark"] .btn-ghost:hover { border-color: rgba(251,191,36,0.3) !important; background: var(--accent-subtle); }
+[data-theme="light"] .btn-ghost:hover { border-color: rgba(249,115,22,0.35) !important; background: rgba(249,115,22,0.06); }
 
 /* ---- Filter bar wrap dengan border lebih jelas ---- */
 [data-theme="dark"] .filter-bar-wrap {
