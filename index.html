@@ -67,8 +67,8 @@
     <a class="nav-item" data-page="leaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
     <div class="nav-section-label">Pembelajaran</div>
     <a class="nav-item" data-page="materi"><span class="nav-icon">📚</span> Materi</a>
-    <div class="nav-section-label">Khusus Dosen</div>
-    <a class="nav-item" data-page="dosen"><span class="nav-icon">🧑‍🏫</span> Dashboard Dosen</a>
+    <div class="nav-section-label">Khusus Admin</div>
+    <a class="nav-item" data-page="admin"><span class="nav-icon">🧑‍🏫</span> Dashboard Admin</a>
   </nav>
   <div class="sidebar-footer">
     <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Mode Gelap</button>
@@ -237,22 +237,22 @@
   </div>
 
   <!-- PAGE: DASHBOARD DOSEN -->
-  <div class="page" id="page-dosen">
+  <div class="page" id="page-admin">
     <section class="section">
       <div class="section-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
         <div>
-          <div class="section-eyebrow">Khusus Dosen</div>
+          <div class="section-eyebrow">Khusus Admin</div>
           <h2 class="section-title">🧑‍🏫 Dashboard Analitik</h2>
           <p class="section-sub">Ringkasan performa seluruh mahasiswa berdasarkan data Google Sheets</p>
         </div>
         <div style="display:flex; gap:8px;">
-          <select id="dosen-subject-filter" class="filter-select" onchange="renderDosenDashboard()">
+          <select id="admin-subject-filter" class="filter-select" onchange="renderAdminDashboard()">
             <option value="all">— Semua Mata Kuliah —</option>
           </select>
-          <button class="btn-filter-clear" onclick="refreshDosenData()" title="Muat ulang data">🔄</button>
+          <button class="btn-filter-clear" onclick="refreshAdminData()" title="Muat ulang data">🔄</button>
         </div>
       </div>
-      <div id="dosen-content">
+      <div id="admin-content">
         <div class="empty-state" style="padding:50px;"><div class="empty-state-icon">⏳</div><div class="empty-state-title">Memuat data analitik...</div></div>
       </div>
     </section>
