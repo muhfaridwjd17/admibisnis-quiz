@@ -67,6 +67,8 @@
     <a class="nav-item" data-page="leaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
     <div class="nav-section-label">Pembelajaran</div>
     <a class="nav-item" data-page="materi"><span class="nav-icon">📚</span> Materi</a>
+    <div class="nav-section-label">Khusus Dosen</div>
+    <a class="nav-item" data-page="dosen"><span class="nav-icon">🧑‍🏫</span> Dashboard Dosen</a>
   </nav>
   <div class="sidebar-footer">
     <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Mode Gelap</button>
@@ -231,6 +233,28 @@
     <section class="section">
       <div class="section-header"><div class="section-eyebrow">Pembelajaran</div><h2 class="section-title">Materi Pembelajaran</h2><p class="section-sub">Rangkuman materi lengkap setiap mata kuliah. Pelajari sebelum mengerjakan kuis!</p></div>
       <div class="materi-grid" id="materi-grid"></div>
+    </section>
+  </div>
+
+  <!-- PAGE: DASHBOARD DOSEN -->
+  <div class="page" id="page-dosen">
+    <section class="section">
+      <div class="section-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+        <div>
+          <div class="section-eyebrow">Khusus Dosen</div>
+          <h2 class="section-title">🧑‍🏫 Dashboard Analitik</h2>
+          <p class="section-sub">Ringkasan performa seluruh mahasiswa berdasarkan data Google Sheets</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <select id="dosen-subject-filter" class="filter-select" onchange="renderDosenDashboard()">
+            <option value="all">— Semua Mata Kuliah —</option>
+          </select>
+          <button class="btn-filter-clear" onclick="refreshDosenData()" title="Muat ulang data">🔄</button>
+        </div>
+      </div>
+      <div id="dosen-content">
+        <div class="empty-state" style="padding:50px;"><div class="empty-state-icon">⏳</div><div class="empty-state-title">Memuat data analitik...</div></div>
+      </div>
     </section>
   </div>
 
