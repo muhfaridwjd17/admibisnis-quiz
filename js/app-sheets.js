@@ -217,7 +217,9 @@ function finishQuiz() {
   stopSoalTimer();
   STATE.quizActive=false;
   const sub=STATE.currentSubject;
-  const correct=sub.questions.filter((q,i)=>STATE.answers[i]===q.answer).length;
+  const correctNumbers=[], wrongNumbers=[];
+  sub.questions.forEach((q,i)=>{ if(STATE.answers[i]===q.answer) correctNumbers.push(i+1); else wrongNumbers.push(i+1); });
+  const correct=correctNumbers.length;
   const total=sub.questions.length, score=Math.round((correct/total)*100);
   const identity=STATE.currentIdentity||{nama:'Mahasiswa',nim:'-',kelas:'-'};
   const totalSecs = STATE.totalSoalTime || Math.round((Date.now() - (STATE.quizStartTime||Date.now()))/1000);
@@ -230,19 +232,23 @@ function finishQuiz() {
   localStorage.setItem('quiz_history',JSON.stringify(STATE.history));
   kirimHasilKeSheets(record);
   showPage('result');
-  renderResult(correct,total,score,identity);
+  renderResult(correct,total,score,identity,correctNumbers,wrongNumbers);
 }
 
-function renderResult(correct,total,score,identity) {
+function renderResult(correct,total,score,identity,correctNumbers,wrongNumbers) {
   const wrong=total-correct, grade=getGrade(score);
   updateTopbar('Hasil Kuis',STATE.currentSubject.title);
   const rec=STATE.history[STATE.history.length-1];
   const timeStr=rec&&rec.timeStr?rec.timeStr:'-';
+  correctNumbers = correctNumbers || [];
+  wrongNumbers = wrongNumbers || [];
 
   const resultPage=document.querySelector('#page-result .quiz-container');
   if(!resultPage)return;
 
   const radius=72,cx=90,cy=90,circ=2*Math.PI*radius,dash=(score/100)*circ;
+
+  const numberChip = (n, color) => `<span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:11px;font-weight:800;background:${color}18;color:${color};border:1px solid ${color}30;">${n}</span>`;
 
   resultPage.innerHTML=`
     <div class="result-card-v2 fade-in" style="--result-accent:${grade.color};">
@@ -277,11 +283,13 @@ function renderResult(correct,total,score,identity) {
           <span class="result-stat-icon">✅</span>
           <div class="result-stat-num" style="color:#10B981;">${correct}</div>
           <div class="result-stat-lbl">Benar</div>
+          ${correctNumbers.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:10px;">${correctNumbers.map(n=>numberChip(n,'#10B981')).join('')}</div>`:''}
         </div>
         <div class="result-stat-v2">
           <span class="result-stat-icon">❌</span>
           <div class="result-stat-num" style="color:#EF4444;">${wrong}</div>
           <div class="result-stat-lbl">Salah</div>
+          ${wrongNumbers.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:10px;">${wrongNumbers.map(n=>numberChip(n,'#EF4444')).join('')}</div>`:''}
         </div>
         <div class="result-stat-v2">
           <span class="result-stat-icon">⏱️</span>
