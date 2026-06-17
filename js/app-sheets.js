@@ -65,7 +65,7 @@ function navigate(page) {
   if (page==='nilai') renderNilaiPage();
   if (page==='leaderboard') renderLeaderboard();
   if (page==='materi') renderMateriPage();
-  if (page==='dosen') renderDosenDashboard();
+  if (page==='admin') renderAdminDashboard();
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebar-overlay').classList.remove('open');
   window.scrollTo(0,0);
@@ -303,6 +303,9 @@ function renderResult(correct,total,score,identity,correctNumbers,wrongNumbers) 
         <button class="btn btn-primary btn-lg" onclick="if(STATE.currentSubject) showModalIdentitas(STATE.currentSubject.id)">
           🔄 Coba Lagi
         </button>
+        ${score>=70?`<button class="btn btn-export print btn-lg" style="padding:13px 26px;font-size:14px;" onclick="downloadSertifikat('${identity.nama.replace(/'/g,"\\'")}','${identity.nim}','${identity.kelas}','${STATE.currentSubject.title.replace(/'/g,"\\'")}',${score},'${getGrade(score).label}','${timeStr}','${new Date().toISOString()}')">
+          🏅 Sertifikat
+        </button>`:''}
         <button class="btn btn-secondary btn-lg" onclick="navigate('nilai')">
           📊 Lihat Nilai
         </button>
@@ -556,7 +559,10 @@ function renderNilaiTable() {
               <td style="font-size:12px;color:var(--text-muted);">⏱️ ${r.timeStr||'-'}</td>
               <td><span class="score-pill" style="background:${grade.color}20;color:${grade.color};font-weight:800;">${r.score}%</span></td>
               <td><span style="background:${grade.color};color:white;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;">${grade.label}</span></td>
-              <td class="no-print"><button class="btn-row-delete" onclick="hapusSatuNilai('${r.recordId}')" title="Hapus data ini">🗑️</button></td>
+              <td class="no-print" style="display:flex;gap:6px;justify-content:center;">
+                ${r.score>=70?`<button class="btn-row-delete" style="background:rgba(217,119,6,0.1);border-color:rgba(217,119,6,0.3);" onclick="downloadSertifikat('${(r.nama||'-').replace(/'/g,"\\'")}','${r.nim||'-'}','${r.kelas||'-'}','${(r.subjectTitle||'-').replace(/'/g,"\\'")}',${r.score},'${grade.label}','${r.timeStr||'-'}','${r.date}')" title="Download sertifikat">🏅</button>`:''}
+                <button class="btn-row-delete" onclick="hapusSatuNilai('${r.recordId}')" title="Hapus data ini">🗑️</button>
+              </td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -946,6 +952,112 @@ function printLb() {
   showToast('📄 Membuka preview cetak...', 'success');
 }
 
+// ==================== SERTIFIKAT PDF ====================
+function generateCertId(nim, date) {
+  const d = new Date(date);
+  const datePart = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  return `ABZ-${datePart}-${(nim||'XXXX').slice(-4)}`;
+}
+
+function downloadSertifikat(nama, nim, kelas, subjectTitle, score, gradeLabel, timeStr, dateStr) {
+  if (score < 70) { showToast('⚠️ Sertifikat hanya tersedia untuk nilai lulus (≥70%)', 'warning'); return; }
+  const grade = getGrade(score);
+  const tanggal = dateStr ? new Date(dateStr) : new Date();
+  const certId = generateCertId(nim, tanggal);
+  const tanggalStr = tanggal.toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Sertifikat - ${nama}</title>
+  <style>
+    @page { margin: 0; size: A4 landscape; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Georgia', 'Times New Roman', serif; background: #FFFBF0; }
+    .cert-wrap {
+      width: 100%; height: 100vh; padding: 28px;
+      background: linear-gradient(135deg, #FFFBF0 0%, #FFF7ED 100%);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cert-border {
+      width: 100%; height: 100%; max-width: 1000px;
+      border: 3px solid #D97706; border-radius: 4px;
+      padding: 8px; position: relative;
+    }
+    .cert-inner {
+      width: 100%; height: 100%;
+      border: 1.5px solid #F59E0B; border-radius: 2px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 36px 56px; text-align: center; position: relative;
+    }
+    .cert-corner { position: absolute; width: 28px; height: 28px; border: 2.5px solid #D97706; }
+    .cert-corner.tl { top: -2px; left: -2px; border-right: none; border-bottom: none; }
+    .cert-corner.tr { top: -2px; right: -2px; border-left: none; border-bottom: none; }
+    .cert-corner.bl { bottom: -2px; left: -2px; border-right: none; border-top: none; }
+    .cert-corner.br { bottom: -2px; right: -2px; border-left: none; border-top: none; }
+    .cert-logo { font-size: 36px; margin-bottom: 6px; }
+    .cert-brand { font-size: 13px; font-weight: 700; letter-spacing: 3px; color: #92400E; text-transform: uppercase; margin-bottom: 24px; }
+    .cert-label { font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: #B45309; margin-bottom: 10px; }
+    .cert-title { font-size: 38px; font-weight: 700; color: #1C0A00; margin-bottom: 22px; letter-spacing: 1px; }
+    .cert-sub { font-size: 13px; color: #57534E; margin-bottom: 4px; }
+    .cert-name { font-size: 32px; font-weight: 700; color: #B45309; font-style: italic; margin: 10px 0 18px; border-bottom: 1.5px solid #F59E0B; padding-bottom: 10px; display: inline-block; min-width: 380px; }
+    .cert-desc { font-size: 14px; color: #44403C; line-height: 1.8; max-width: 560px; margin-bottom: 22px; }
+    .cert-desc strong { color: #1C0A00; }
+    .cert-score-row { display: flex; gap: 36px; margin-bottom: 26px; }
+    .cert-score-item { text-align: center; }
+    .cert-score-num { font-size: 26px; font-weight: 700; color: #B45309; }
+    .cert-score-lbl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #78716C; margin-top: 2px; }
+    .cert-footer { display: flex; justify-content: space-between; align-items: flex-end; width: 100%; max-width: 640px; margin-top: 12px; }
+    .cert-footer-block { text-align: center; font-size: 11px; color: #57534E; }
+    .cert-footer-block .line { width: 140px; border-top: 1px solid #A8A29E; margin-bottom: 6px; }
+    .cert-id { position: absolute; bottom: 14px; right: 24px; font-size: 9px; color: #A8A29E; font-family: monospace; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style></head><body>
+  <div class="cert-wrap">
+    <div class="cert-border">
+      <div class="cert-inner">
+        <div class="cert-corner tl"></div><div class="cert-corner tr"></div>
+        <div class="cert-corner bl"></div><div class="cert-corner br"></div>
+
+        <div class="cert-logo">🎓</div>
+        <div class="cert-brand">AdminBiz · Portal Akademik D4 Administrasi Bisnis PNUP</div>
+
+        <div class="cert-label">Sertifikat Pencapaian</div>
+        <div class="cert-title">${grade.label === 'A' ? 'Penghargaan Prestasi' : 'Kelulusan Kuis'}</div>
+
+        <div class="cert-sub">Diberikan kepada</div>
+        <div class="cert-name">${nama}</div>
+
+        <div class="cert-desc">
+          NIM <strong>${nim}</strong> dari kelas <strong>${kelas}</strong>, atas keberhasilannya menyelesaikan kuis
+          mata kuliah <strong>${subjectTitle}</strong> dengan hasil yang membanggakan pada portal AdminBiz.
+        </div>
+
+        <div class="cert-score-row">
+          <div class="cert-score-item"><div class="cert-score-num">${score}%</div><div class="cert-score-lbl">Nilai Akhir</div></div>
+          <div class="cert-score-item"><div class="cert-score-num">${grade.label}</div><div class="cert-score-lbl">Grade</div></div>
+          <div class="cert-score-item"><div class="cert-score-num">${timeStr||'-'}</div><div class="cert-score-lbl">Waktu Pengerjaan</div></div>
+        </div>
+
+        <div class="cert-footer">
+          <div class="cert-footer-block">
+            <div class="line"></div>
+            ${tanggalStr}<br>Tanggal Penerbitan
+          </div>
+          <div class="cert-footer-block">
+            <div class="line"></div>
+            Portal AdminBiz<br>Sistem Otomatis
+          </div>
+        </div>
+
+        <div class="cert-id">ID: ${certId}</div>
+      </div>
+    </div>
+  </div>
+  <script>window.onload = function(){ window.print(); }<\/script>
+  </body></html>`);
+  win.document.close();
+  showToast('🏅 Membuka preview sertifikat...', 'success');
+}
+
 // ==================== MATERI ====================
 const MATERI_DATA={pkn:{deskripsi:'Mempelajari nilai-nilai kebangsaan, hak dan kewajiban warga negara, serta sistem pemerintahan Indonesia.',topik:[{judul:'Pancasila sebagai Dasar Negara',isi:'Pancasila merupakan dasar filosofis negara Indonesia yang terdiri dari 5 sila. Tercantum dalam Pembukaan UUD 1945 alinea ke-4. Fungsi: dasar negara, ideologi nasional, pandangan hidup bangsa, dan sumber hukum.'},{judul:'UUD 1945 dan Amandemen',isi:'UUD 1945 adalah konstitusi tertinggi Indonesia. Telah diamandemen 4 kali (1999-2002). MPR berwenang mengubah UUD. Pasal 31: hak pendidikan. Pasal 27 ayat 3: bela negara. Pasal 30: pertahanan negara.'},{judul:'Hak dan Kewajiban Warga Negara',isi:'Hak WNI: pendidikan, pekerjaan, perlindungan hukum. Kewajiban WNI: mematuhi hukum, membayar pajak, bela negara. Asas personalitas aktif: WNI di luar negeri tetap tunduk hukum Indonesia.'},{judul:'Sistem Pemerintahan Indonesia',isi:'Indonesia menganut sistem presidensial. Presiden adalah kepala negara sekaligus kepala pemerintahan. Lembaga negara: MPR, DPR, DPD, Presiden, MA, MK, KY. Pemilu berdasarkan asas LUBER JURDIL.'},{judul:'Bhinneka Tunggal Ika',isi:'Berasal dari kitab Sutasoma karangan Mpu Tantular (Majapahit), bahasa Kawi. Artinya "Berbeda-beda tetapi tetap satu jua". Semboyan persatuan bangsa Indonesia yang majemuk.'}]},mpi:{deskripsi:'Mempelajari teori dan praktik pengelolaan portofolio investasi, analisis risiko, dan instrumen keuangan.',topik:[{judul:'Teori Portofolio Modern (Markowitz)',isi:'Dikembangkan Harry Markowitz (1952). Diversifikasi mengurangi risiko tanpa mengorbankan return. Efficient Frontier: kumpulan portofolio optimal berdasarkan risk-return trade-off.'},{judul:'Capital Asset Pricing Model (CAPM)',isi:'E(Ri) = Rf + βi × [E(Rm) - Rf]. Beta > 1: lebih volatil dari pasar. Beta < 1: lebih stabil dari pasar. Contoh: Rf=4%, Rm=10%, β=1,5 → E(Ri) = 4% + 1,5×(10%-4%) = 13%.'},{judul:'Risiko Investasi',isi:'Risiko sistematis (market risk): tidak bisa dihilangkan dengan diversifikasi — inflasi, krisis ekonomi. Risiko tidak sistematis: bisa dihilangkan dengan diversifikasi — risiko perusahaan spesifik.'},{judul:'Efficient Market Hypothesis (EMH)',isi:'Bentuk lemah: harga mencerminkan info historis. Bentuk semi-kuat: harga mencerminkan semua info publik. Bentuk kuat: harga mencerminkan semua info termasuk insider information.'},{judul:'Instrumen & Pengukuran Kinerja',isi:'Saham: kepemilikan perusahaan. Obligasi: surat utang berbunga. Zero-coupon bond: dijual di bawah nilai nominal. Sharpe Ratio = (Return Portfolio - Risk-Free Rate) / Standar Deviasi Portfolio.'}]},pk:{deskripsi:'Mempelajari faktor-faktor yang mempengaruhi keputusan pembelian konsumen.',topik:[{judul:'Hierarki Kebutuhan Maslow',isi:'Dari dasar ke puncak: (1) Fisiologis: makan, minum, tidur. (2) Keamanan: perlindungan, stabilitas. (3) Sosial: cinta, rasa memiliki. (4) Penghargaan: status, prestasi. (5) Aktualisasi diri.'},{judul:'Proses Pengambilan Keputusan',isi:'5 tahap: Pengenalan masalah → Pencarian informasi → Evaluasi alternatif → Keputusan pembelian → Perilaku pasca pembelian. Disonansi kognitif terjadi SETELAH pembelian.'},{judul:'Faktor yang Mempengaruhi Konsumen',isi:'Budaya: nilai dan norma masyarakat. Sosial: kelompok referensi primer (keluarga, teman dekat) paling berpengaruh. Psikologis: motivasi, persepsi, pembelajaran. Pribadi: usia, gaya hidup.'},{judul:'Segmentasi Pasar',isi:'Demografis: usia, jenis kelamin, pendapatan. Geografis: wilayah. Psikografis: gaya hidup, kepribadian — paling sulit diukur tapi powerful. Behavioral: frekuensi pembelian, loyalitas merek.'},{judul:'Jenis Perilaku Pembelian',isi:'Complex buying: keterlibatan tinggi, beda merek signifikan (mobil, rumah). Habitual buying: keterlibatan rendah, tidak beda merek (garam). Impulse buying: pembelian tanpa rencana. High involvement = produk mahal dan jarang dibeli.'}]},kep:{deskripsi:'Mempelajari berbagai teori, gaya, dan pendekatan kepemimpinan efektif dalam organisasi.',topik:[{judul:'Gaya-Gaya Kepemimpinan',isi:'Otoriter: pemimpin pengambil keputusan tunggal, bawahan hanya melaksanakan. Demokratis: libatkan bawahan dalam pengambilan keputusan. Laissez-faire: kebebasan penuh kepada bawahan. Transformasional: ubah nilai dan motivasi pengikut.'},{judul:'Teori Situasional (Hersey & Blanchard)',isi:'Gaya disesuaikan kematangan bawahan. M1 (rendah) → Telling/Directing: perintah langsung. M2 → Selling/Coaching: jual ide. M3 → Participating: ikutsertakan bawahan. M4 (tinggi) → Delegating: serahkan tugas penuh.'},{judul:'Kepemimpinan Transformasional vs Transaksional',isi:'Transformasional (Burns/Bass): inspirasi visi bersama, ubah nilai pengikut, karisma, stimulasi intelektual. Transaksional: fokus pertukaran reward untuk kinerja, lebih mempertahankan status quo.'},{judul:'Teori X dan Teori Y (McGregor)',isi:'Teori X: bawahan malas, tidak suka tanggung jawab, perlu dikontrol ketat dan diarahkan. Teori Y: bawahan kreatif, bisa mandiri, suka tanggung jawab jika kondisi kerja mendukung.'},{judul:'Sumber Kekuasaan & Emotional Intelligence',isi:'French & Raven: Legitimate (posisi formal), Reward (imbalan), Coercive (hukuman), Expert (keahlian), Referent (kekaguman). EQ Goleman: self-awareness, self-regulation, motivation, empathy, social skills.'}]},pp:{deskripsi:'Mempelajari konsep dan teknik memberikan pelayanan terbaik kepada pelanggan.',topik:[{judul:'Konsep Pelayanan Prima (A3)',isi:'Attitude (sikap positif, ramah, sopan terhadap pelanggan), Attention (perhatian penuh, mendengarkan aktif), Action (tindakan nyata untuk memenuhi kebutuhan). Tujuan akhir: kepuasan dan loyalitas pelanggan jangka panjang.'},{judul:'SERVQUAL (Parasuraman)',isi:'5 dimensi kualitas layanan: Tangible (fasilitas fisik yang terlihat), Reliability (kemampuan layanan tepat waktu dan akurat), Responsiveness (kecepatan membantu), Assurance (pengetahuan dan kesopanan), Empathy (perhatian individual).'},{judul:'Mengukur Kepuasan Pelanggan',isi:'CSI (Customer Satisfaction Index): indeks kepuasan berdasarkan survei. NPS (Net Promoter Score) = % Promoter (skor 9-10) - % Detractor (skor 0-6). CLV (Customer Lifetime Value): total nilai pelanggan sepanjang hubungan dengan perusahaan.'},{judul:'Penanganan Keluhan (LAST)',isi:'Listen: dengarkan keluhan dengan penuh perhatian tanpa memotong. Apologize: minta maaf dengan tulus meski bukan kesalahan kita. Solve: selesaikan masalah dengan tepat dan cepat. Thank: ucapkan terima kasih atas masukan pelanggan.'},{judul:'Prinsip Pelayanan Unggul',isi:'Underpromise & overdeliver: janjikan sedikit, berikan lebih dari yang dijanjikan. Customer-centric: pelanggan sebagai pusat semua keputusan. Konsistensi standar layanan di setiap interaksi dan saluran komunikasi.'}]},ebc:{deskripsi:'Mempelajari teknik penulisan surat bisnis dan korespondensi profesional dalam bahasa Inggris.',topik:[{judul:'Structure of Business Letters',isi:'Parts of a business letter: (1) Letterhead/Date, (2) Inside address, (3) Salutation, (4) Body — opening, middle, closing paragraph, (5) Complimentary close, (6) Signature block. Each part has specific function and placement.'},{judul:'Salutations and Closings',isi:'"Yours faithfully" = when you do NOT know the recipient\'s name (used with Dear Sir/Madam). "Yours sincerely" = when you KNOW the recipient\'s name (used with Dear Mr./Ms. [Name]). Both A and C: "Dear Sir/Madam" AND "To Whom It May Concern" are both acceptable for unknown recipients.'},{judul:'Email Etiquette in Business',isi:'Subject line: brief and informative — e.g., "Meeting Request – March 15". CC (Carbon Copy): copy to relevant parties who need to be informed. BCC (Blind Carbon Copy): hidden copy. Opening: "I am writing to...", "With reference to your email...". Always professional.'},{judul:'Memorandum (Memo)',isi:'Memo is for INTERNAL communication within an organization. Standard format: TO:, FROM:, DATE:, SUBJECT: header block. No formal salutation or complimentary close needed. Tone: formal but concise. Purpose: announcements, reminders, policy updates.'},{judul:'Polite Language & Business Requests',isi:'"I would appreciate it if you could..." = most polite. "Could you please..." = polite request. "Would it be possible to..." = very formal polite. Avoid: "You must send...", "Give me..." — too direct and impolite in business context. Enclosure notation indicates additional documents.'}]},sb:{deskripsi:'Mempelajari simulasi pengambilan keputusan bisnis dalam berbagai skenario strategis.',topik:[{judul:'Analisis SWOT',isi:'Strengths (kekuatan internal perusahaan), Weaknesses (kelemahan internal), Opportunities (peluang eksternal yang menguntungkan), Threats (ancaman eksternal yang merugikan). Strategi: SO (manfaatkan kekuatan-peluang), WO, ST, WT.'},{judul:'Strategi Bersaing Porter',isi:'Cost Leadership: jadi produsen berbiaya terendah di industri. Differentiation: tawarkan produk/jasa unik bernilai tinggi. Focus: layani segmen sempit. Market penetration: tingkatkan penjualan produk ada di pasar ada. Blue Ocean: ciptakan pasar baru tanpa pesaing.'},{judul:'Break-Even Point (BEP)',isi:'BEP Unit = Total Biaya Tetap / (Harga Jual - Biaya Variabel per Unit). Di titik BEP: Total Pendapatan = Total Biaya, Laba = 0. Di atas BEP = untung. Di bawah BEP = rugi. BEP penting untuk menentukan target penjualan minimum.'},{judul:'Key Performance Indicators (KPI)',isi:'ROI = (Net Profit / Total Investment) × 100%. Market Share = (Penjualan Perusahaan / Total Industri) × 100%. Cash flow positif: arus kas masuk > arus kas keluar. Perbedaan: cash flow ≠ profit — bisa profit tapi cash flow negatif.'},{judul:'Pengambilan Keputusan Bisnis',isi:'Pricing strategy mempertimbangkan tiga hal: biaya produksi (floor price), harga pesaing (benchmark), dan nilai bagi pelanggan (ceiling price). Balanced Scorecard: 4 perspektif kinerja: Keuangan, Pelanggan, Proses Internal, Pembelajaran & Pertumbuhan.'}]},akb:{deskripsi:'Mempelajari penerapan aplikasi komputer dalam kegiatan bisnis sehari-hari.',topik:[{judul:'Microsoft Excel — Fungsi Dasar & Penting',isi:'SUM (jumlah), AVERAGE (rata-rata), COUNT (hitung angka), IF (logika kondisi), VLOOKUP (cari nilai berdasarkan kolom). Shortcut: Ctrl+Z (undo), Ctrl+S (simpan), Ctrl+C/V (copy/paste), F2 (edit sel). Format file: .xlsx (Excel modern), .xls (lama), .csv (universal).'},{judul:'Microsoft Excel — Fitur Analitik',isi:'Pivot Table: meringkas dan menganalisis data besar dengan drag-drop field — SANGAT powerful untuk laporan. Conditional Formatting: format otomatis berdasarkan kondisi (warnai sel merah jika nilai < 60). Data Validation: batasi jenis input data. Filter & Sort untuk tampilkan/urutkan data.'},{judul:'Microsoft Word — Fitur Bisnis',isi:'Mail Merge: buat surat/undangan massal otomatis dari sumber data Excel atau Access. Track Changes: lacak setiap perubahan dokumen. Table of Contents: daftar isi otomatis dari heading. Header/Footer: informasi konsisten di setiap halaman. Macro: otomatisasi tugas berulang dengan VBA.'},{judul:'Database & Microsoft Access',isi:'Database: kumpulan data terstruktur dan saling terkait. DBMS: software pengelola database. Microsoft Access: DBMS desktop untuk bisnis kecil-menengah, berbasis GUI. Objek utama: Table (data), Query (pertanyaan ke data), Form (input), Report (output cetak). Relasi: primary key & foreign key.'},{judul:'Cloud Computing & Integrasi Bisnis',isi:'Cloud computing manfaat: akses kapan/di mana saja, hemat biaya infrastruktur IT, skalabel sesuai kebutuhan. ERP (Enterprise Resource Planning): sistem terintegrasi kelola seluruh proses bisnis (SAP, Oracle). CRM: kelola interaksi pelanggan (Salesforce). Google Workspace & Microsoft 365 = cloud office suite.'}]},kb:{deskripsi:'Mempelajari formulasi dan implementasi kebijakan bisnis serta kerangka strategis perusahaan.',topik:[{judul:"Porter's Five Forces",isi:'5 kekuatan kompetitif yang menentukan daya tarik industri: (1) Intensitas persaingan antar pesaing yang ada. (2) Ancaman pendatang baru (barrier to entry). (3) Ancaman produk/jasa substitusi. (4) Daya tawar pemasok. (5) Daya tawar pembeli. Semakin kuat kelima kekuatan, semakin rendah profitabilitas.'},{judul:'BCG Matrix',isi:'Stars: pangsa pasar tinggi, pertumbuhan tinggi → investasi agresif. Cash Cows: pangsa tinggi, tumbuh rendah → pertahankan, hasilkan kas untuk Stars. Question Marks: pangsa rendah, tumbuh tinggi → putuskan: investasi atau divestasi. Dogs: keduanya rendah → pertimbangkan divestasi.'},{judul:'Strategi Korporat',isi:'Merger: dua perusahaan bergabung menjadi satu entitas baru yang setara. Akuisisi: satu perusahaan membeli dan mengontrol perusahaan lain. Diversifikasi konglomerat: masuk bisnis yang TIDAK berhubungan dengan bisnis utama. Blue Ocean Strategy: ciptakan ruang pasar baru tanpa pesaing.'},{judul:'Good Corporate Governance (GCG)',isi:'5 prinsip GCG: Transparency (keterbukaan informasi), Accountability (kejelasan fungsi dan pertanggungjawaban), Responsibility (kepatuhan terhadap peraturan), Independency (profesional tanpa konflik kepentingan), Fairness (keadilan bagi seluruh stakeholder). CSR: tanggung jawab ke masyarakat dan lingkungan.'},{judul:'Balanced Scorecard & VRIO',isi:'Balanced Scorecard (Kaplan & Norton): ukur kinerja dari 4 perspektif seimbang — Keuangan, Pelanggan, Proses Internal, Pembelajaran & Pertumbuhan. VRIO (Barney): sumber daya berikan keunggulan kompetitif berkelanjutan jika Valuable, Rare, Inimitable (tidak dapat ditiru), dan Organized.'}]},sim:{deskripsi:'Mempelajari konsep dan penerapan sistem informasi dalam mendukung manajemen bisnis.',topik:[{judul:'Konsep Dasar SIM',isi:'SIM (Sistem Informasi Manajemen): sistem yang menyediakan informasi untuk mendukung pengambilan keputusan manajerial. Hirarki: TPS (transaksi harian) → MIS (laporan terstruktur) → DSS (semi-terstruktur) → EIS (ringkasan eksekutif). Data → diproses → Informasi → digunakan untuk keputusan.'},{judul:'ERP (Enterprise Resource Planning)',isi:'ERP: sistem informasi TERINTEGRASI yang mengelola seluruh proses bisnis dalam satu platform — keuangan, SDM, produksi, distribusi, penjualan. Contoh populer: SAP, Oracle, Microsoft Dynamics. Keunggulan: data real-time, eliminasi duplikasi data, efisiensi lintas departemen.'},{judul:'DSS dan EIS',isi:'DSS (Decision Support System): bantu manajer menengah/atas membuat keputusan SEMI-TERSTRUKTUR menggunakan model analitik dan simulasi. EIS/ESS (Executive Information System): sajikan informasi ringkasan dan KPI dalam format dashboard visual untuk eksekutif senior.'},{judul:'CRM dan Data Warehouse',isi:'CRM (Customer Relationship Management): sistem kelola seluruh interaksi dan hubungan dengan pelanggan sepanjang siklus hidup (Salesforce, HubSpot). Data Warehouse: basis data besar dioptimalkan untuk ANALISIS historis, bukan transaksi. OLAP untuk analisis multi-dimensi, OLTP untuk transaksi real-time.'},{judul:'Big Data & Business Intelligence',isi:'Big Data dicirikan 3V: Volume (data sangat besar), Velocity (kecepatan tinggi), Variety (berbagai format). BI Tools (Tableau, Power BI): ubah data mentah jadi wawasan bisnis yang actionable. Keamanan informasi CIA: Confidentiality (kerahasiaan), Integrity (keutuhan), Availability (ketersediaan). Interoperabilitas: sistem berbeda saling berkomunikasi.'}]}};
 
@@ -1022,13 +1134,13 @@ window.addEventListener('blur', () => {
 });
 
 // ==================== DASHBOARD DOSEN (ANALITIK KELAS) ====================
-async function renderDosenDashboard() {
-  updateTopbar('Dashboard Dosen', 'Analitik performa seluruh mahasiswa');
-  const container = document.getElementById('dosen-content');
+async function renderAdminDashboard() {
+  updateTopbar('Dashboard Admin', 'Analitik performa seluruh mahasiswa');
+  const container = document.getElementById('admin-content');
   if (!container) return;
 
   // Isi dropdown filter mata kuliah sekali saja
-  const filterEl = document.getElementById('dosen-subject-filter');
+  const filterEl = document.getElementById('admin-subject-filter');
   if (filterEl && filterEl.options.length <= 1) {
     Object.entries(SHEETS_CONFIG).forEach(([id, sub]) => {
       const opt = document.createElement('option');
@@ -1040,19 +1152,19 @@ async function renderDosenDashboard() {
 
   container.innerHTML = `<div class="empty-state" style="padding:50px;"><div class="empty-state-icon">⏳</div><div class="empty-state-title">Memuat data analitik...</div></div>`;
   await fetchRemoteHistory();
-  drawDosenDashboard();
+  drawAdminDashboard();
 }
 
-function refreshDosenData() {
+function refreshAdminData() {
   showToast('🔄 Memuat ulang data analitik...', 'info');
-  fetchRemoteHistory(true).then(() => { drawDosenDashboard(); showToast('✅ Data terbaru dimuat', 'success'); });
+  fetchRemoteHistory(true).then(() => { drawAdminDashboard(); showToast('✅ Data terbaru dimuat', 'success'); });
 }
 
-function drawDosenDashboard() {
-  const container = document.getElementById('dosen-content');
+function drawAdminDashboard() {
+  const container = document.getElementById('admin-content');
   if (!container) return;
 
-  const subjectFilter = document.getElementById('dosen-subject-filter')?.value || 'all';
+  const subjectFilter = document.getElementById('admin-subject-filter')?.value || 'all';
   const all = mergeHistory().filter(r => subjectFilter === 'all' || r.subjectId === subjectFilter);
 
   if (all.length === 0) {
