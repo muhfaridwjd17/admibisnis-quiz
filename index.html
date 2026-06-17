@@ -50,6 +50,63 @@
   </div>
 </div>
 
+<!-- MODAL LOGIN ADMIN -->
+<div id="modal-admin-login" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:500; align-items:center; justify-content:center; backdrop-filter:blur(8px);">
+  <div style="background:var(--bg-secondary); border:1px solid var(--border-glass); border-radius:24px; padding:40px; max-width:420px; width:90%; box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+    <div style="text-align:center; margin-bottom:28px;">
+      <div style="font-size:40px; margin-bottom:12px;">🔐</div>
+      <div style="font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--accent-indigo); margin-bottom:6px;">Akses Terbatas</div>
+      <div style="font-size:18px; font-weight:800; color:var(--text-primary);">Login Admin</div>
+      <div style="font-size:13px; color:var(--text-muted); margin-top:6px;">Masuk untuk mengelola data &amp; analitik kelas</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:16px;">
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Username</label>
+        <input id="admin-login-username" type="text" placeholder="Masukkan username admin..." style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;" onfocus="this.style.borderColor='var(--accent-indigo)'" onblur="this.style.borderColor='var(--border-subtle)'">
+      </div>
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Password</label>
+        <input id="admin-login-password" type="password" placeholder="Masukkan password admin..." style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;" onfocus="this.style.borderColor='var(--accent-indigo)'" onblur="this.style.borderColor='var(--border-subtle)'">
+      </div>
+    </div>
+    <div id="admin-login-error" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:10px 14px; font-size:12.5px; color:#EF4444; margin-bottom:16px;">❌ Username atau password salah.</div>
+    <div style="display:flex; gap:10px;">
+      <button onclick="closeAdminLoginModal()" style="flex:1; padding:12px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-secondary); font-size:14px; font-weight:600; cursor:pointer;">Batal</button>
+      <button onclick="submitAdminLogin()" style="flex:2; padding:12px; background:linear-gradient(135deg,#6366F1,#8B5CF6); border:none; border-radius:10px; color:white; font-size:14px; font-weight:700; cursor:pointer;">🔓 Masuk</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL UBAH PASSWORD ADMIN -->
+<div id="modal-admin-changepass" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:500; align-items:center; justify-content:center; backdrop-filter:blur(8px);">
+  <div style="background:var(--bg-secondary); border:1px solid var(--border-glass); border-radius:24px; padding:40px; max-width:420px; width:90%; box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+    <div style="text-align:center; margin-bottom:28px;">
+      <div style="font-size:40px; margin-bottom:12px;">🔑</div>
+      <div style="font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--accent-indigo); margin-bottom:6px;">Keamanan Akun</div>
+      <div style="font-size:18px; font-weight:800; color:var(--text-primary);">Ubah Password Admin</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:16px;">
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Password Lama</label>
+        <input id="admin-cp-old" type="password" placeholder="Password saat ini..." style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;">
+      </div>
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Password Baru</label>
+        <input id="admin-cp-new" type="password" placeholder="Minimal 4 karakter..." style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;">
+      </div>
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Konfirmasi Password Baru</label>
+        <input id="admin-cp-new2" type="password" placeholder="Ulangi password baru..." style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;">
+      </div>
+    </div>
+    <div id="admin-cp-error" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:10px 14px; font-size:12.5px; color:#EF4444; margin-bottom:16px;"></div>
+    <div style="display:flex; gap:10px;">
+      <button onclick="closeAdminChangePassModal()" style="flex:1; padding:12px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-secondary); font-size:14px; font-weight:600; cursor:pointer;">Batal</button>
+      <button onclick="submitChangeAdminPassword()" style="flex:2; padding:12px; background:linear-gradient(135deg,#6366F1,#8B5CF6); border:none; border-radius:10px; color:white; font-size:14px; font-weight:700; cursor:pointer;">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
@@ -214,7 +271,6 @@
     <section class="section">
       <div class="section-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
         <div><div class="section-eyebrow">Riwayat</div><h2 class="section-title">Nilai Saya</h2><p class="section-sub">Rekap nilai terbaik dan semua percobaan kuis</p></div>
-        <button class="btn btn-ghost btn-sm" onclick="clearHistory()">🗑️ Hapus Riwayat</button>
       </div>
       <div id="nilai-content"></div>
     </section>
