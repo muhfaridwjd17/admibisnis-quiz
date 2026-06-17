@@ -66,7 +66,10 @@
       </div>
       <div>
         <label style="display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Password</label>
-        <input id="admin-login-password" type="password" placeholder="Masukkan password admin..." style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;" onfocus="this.style.borderColor='var(--accent-indigo)'" onblur="this.style.borderColor='var(--border-subtle)'">
+        <div style="position:relative;">
+          <input id="admin-login-password" type="password" placeholder="Masukkan password admin..." style="width:100%; padding:12px 44px 12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;" onfocus="this.style.borderColor='var(--accent-indigo)'" onblur="this.style.borderColor='var(--border-subtle)'">
+          <button type="button" onclick="togglePwdReveal('admin-login-password', this)" title="Tampilkan/sembunyikan password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:16px; padding:4px; color:var(--text-muted); line-height:1;">👁️</button>
+        </div>
       </div>
     </div>
     <div id="admin-login-error" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:10px 14px; font-size:12.5px; color:#EF4444; margin-bottom:16px;">❌ Username atau password salah.</div>
@@ -74,6 +77,7 @@
       <button onclick="closeAdminLoginModal()" style="flex:1; padding:12px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-secondary); font-size:14px; font-weight:600; cursor:pointer;">Batal</button>
       <button onclick="submitAdminLogin()" style="flex:2; padding:12px; background:linear-gradient(135deg,#6366F1,#8B5CF6); border:none; border-radius:10px; color:white; font-size:14px; font-weight:700; cursor:pointer;">🔓 Masuk</button>
     </div>
+    <div style="text-align:center; font-size:11.5px; color:var(--text-muted); margin-top:16px;">Default: username <strong>admin</strong> &middot; password <strong>admin123</strong></div>
   </div>
 </div>
 
@@ -88,15 +92,24 @@
     <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:16px;">
       <div>
         <label style="display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Password Lama</label>
-        <input id="admin-cp-old" type="password" placeholder="Password saat ini..." style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;">
+        <div style="position:relative;">
+          <input id="admin-cp-old" type="password" placeholder="Password saat ini..." style="width:100%; padding:12px 44px 12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;">
+          <button type="button" onclick="togglePwdReveal('admin-cp-old', this)" title="Tampilkan/sembunyikan password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:16px; padding:4px; color:var(--text-muted); line-height:1;">👁️</button>
+        </div>
       </div>
       <div>
         <label style="display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Password Baru</label>
-        <input id="admin-cp-new" type="password" placeholder="Minimal 4 karakter..." style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;">
+        <div style="position:relative;">
+          <input id="admin-cp-new" type="password" placeholder="Minimal 4 karakter..." style="width:100%; padding:12px 44px 12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;">
+          <button type="button" onclick="togglePwdReveal('admin-cp-new', this)" title="Tampilkan/sembunyikan password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:16px; padding:4px; color:var(--text-muted); line-height:1;">👁️</button>
+        </div>
       </div>
       <div>
         <label style="display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Konfirmasi Password Baru</label>
-        <input id="admin-cp-new2" type="password" placeholder="Ulangi password baru..." style="width:100%; padding:12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;">
+        <div style="position:relative;">
+          <input id="admin-cp-new2" type="password" placeholder="Ulangi password baru..." style="width:100%; padding:12px 44px 12px 16px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:10px; color:var(--text-primary); font-size:14px; outline:none; font-family:inherit;">
+          <button type="button" onclick="togglePwdReveal('admin-cp-new2', this)" title="Tampilkan/sembunyikan password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:16px; padding:4px; color:var(--text-muted); line-height:1;">👁️</button>
+        </div>
       </div>
     </div>
     <div id="admin-cp-error" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:10px 14px; font-size:12.5px; color:#EF4444; margin-bottom:16px;"></div>
