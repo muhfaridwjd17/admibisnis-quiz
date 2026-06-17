@@ -46,6 +46,9 @@ function setAdminLoggedIn(val) {
 function openAdminLoginModal() {
   document.getElementById('admin-login-username').value = '';
   document.getElementById('admin-login-password').value = '';
+  document.getElementById('admin-login-password').type = 'password';
+  const eyeBtn1 = document.querySelector('#admin-login-password + button');
+  if (eyeBtn1) eyeBtn1.textContent = '👁️';
   document.getElementById('admin-login-error').style.display = 'none';
   document.getElementById('modal-admin-login').style.display = 'flex';
   setTimeout(()=>document.getElementById('admin-login-username').focus(), 100);
@@ -73,11 +76,22 @@ function openAdminChangePassModal() {
   document.getElementById('admin-cp-old').value = '';
   document.getElementById('admin-cp-new').value = '';
   document.getElementById('admin-cp-new2').value = '';
+  ['admin-cp-old','admin-cp-new','admin-cp-new2'].forEach(id => {
+    document.getElementById(id).type = 'password';
+    const eyeBtn = document.querySelector('#'+id+' + button');
+    if (eyeBtn) eyeBtn.textContent = '👁️';
+  });
   document.getElementById('admin-cp-error').style.display = 'none';
   document.getElementById('modal-admin-changepass').style.display = 'flex';
   setTimeout(()=>document.getElementById('admin-cp-old').focus(), 100);
 }
 function closeAdminChangePassModal() { document.getElementById('modal-admin-changepass').style.display = 'none'; }
+function togglePwdReveal(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+  else { input.type = 'password'; btn.textContent = '👁️'; }
+}
 function submitChangeAdminPassword() {
   const oldP = document.getElementById('admin-cp-old').value;
   const newP = document.getElementById('admin-cp-new').value;
@@ -1288,7 +1302,7 @@ function drawAdminDashboard() {
       </div>
     </div>
     <div class="stats-grid stagger" style="margin-bottom:24px;">
-      <div class="stat-card"><span class="stat-card-icon">👥</span><div class="stat-card-value">${totalPeserta}</div><div class="stat-card-label">Total Peserta Unik</div></div>
+      <div class="stat-card"><span class="stat-card-icon">👥</span><div class="stat-card-value">${totalPeserta}</div><div class="stat-card-label">Total Peserta</div></div>
       <div class="stat-card"><span class="stat-card-icon">📝</span><div class="stat-card-value">${totalKuis}</div><div class="stat-card-label">Total Pengerjaan Kuis</div></div>
       <div class="stat-card"><span class="stat-card-icon">📈</span><div class="stat-card-value">${avgScore}%</div><div class="stat-card-label">Rata-rata Nilai Kelas</div></div>
       <div class="stat-card"><span class="stat-card-icon">✅</span><div class="stat-card-value">${passRate}%</div><div class="stat-card-label">Tingkat Kelulusan</div></div>
