@@ -25,6 +25,74 @@ async function kirimHasilKeSheets(data) {
   } catch(e) { console.warn('Gagal kirim ke Sheets:', e); }
 }
 
+// ==================== ADMIN AUTH ====================
+// Catatan: ini situs statis (GitHub Pages) tanpa server asli, jadi
+// kredensial disimpan di localStorage browser. Ini cukup untuk
+// mencegah mahasiswa biasa iseng klik tab admin, tapi BUKAN
+// keamanan tingkat tinggi — siapa pun yang membuka DevTools/source
+// kode bisa melihat/melewatinya. Sesuai untuk kebutuhan kelas.
+function getAdminCreds() {
+  const saved = localStorage.getItem('admin_creds');
+  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
+  const def = { username: 'admin', password: 'admin123' };
+  localStorage.setItem('admin_creds', JSON.stringify(def));
+  return def;
+}
+function isAdminLoggedIn() { return sessionStorage.getItem('admin_logged_in') === '1'; }
+function setAdminLoggedIn(val) {
+  if (val) sessionStorage.setItem('admin_logged_in', '1');
+  else sessionStorage.removeItem('admin_logged_in');
+}
+function openAdminLoginModal() {
+  document.getElementById('admin-login-username').value = '';
+  document.getElementById('admin-login-password').value = '';
+  document.getElementById('admin-login-error').style.display = 'none';
+  document.getElementById('modal-admin-login').style.display = 'flex';
+  setTimeout(()=>document.getElementById('admin-login-username').focus(), 100);
+}
+function closeAdminLoginModal() { document.getElementById('modal-admin-login').style.display = 'none'; }
+function submitAdminLogin() {
+  const u = document.getElementById('admin-login-username').value.trim();
+  const p = document.getElementById('admin-login-password').value;
+  const creds = getAdminCreds();
+  if (u === creds.username && p === creds.password) {
+    setAdminLoggedIn(true);
+    closeAdminLoginModal();
+    showToast('✅ Login admin berhasil', 'success');
+    navigate('admin');
+  } else {
+    document.getElementById('admin-login-error').style.display = 'block';
+  }
+}
+function adminLogout() {
+  setAdminLoggedIn(false);
+  showToast('👋 Anda telah logout dari mode admin', 'info');
+  navigate('dashboard');
+}
+function openAdminChangePassModal() {
+  document.getElementById('admin-cp-old').value = '';
+  document.getElementById('admin-cp-new').value = '';
+  document.getElementById('admin-cp-new2').value = '';
+  document.getElementById('admin-cp-error').style.display = 'none';
+  document.getElementById('modal-admin-changepass').style.display = 'flex';
+  setTimeout(()=>document.getElementById('admin-cp-old').focus(), 100);
+}
+function closeAdminChangePassModal() { document.getElementById('modal-admin-changepass').style.display = 'none'; }
+function submitChangeAdminPassword() {
+  const oldP = document.getElementById('admin-cp-old').value;
+  const newP = document.getElementById('admin-cp-new').value;
+  const newP2 = document.getElementById('admin-cp-new2').value;
+  const creds = getAdminCreds();
+  const errEl = document.getElementById('admin-cp-error');
+  function showErr(msg) { errEl.textContent = '⚠️ ' + msg; errEl.style.display = 'block'; }
+  if (oldP !== creds.password) { showErr('Password lama salah.'); return; }
+  if (!newP || newP.length < 4) { showErr('Password baru minimal 4 karakter.'); return; }
+  if (newP !== newP2) { showErr('Konfirmasi password baru tidak cocok.'); return; }
+  localStorage.setItem('admin_creds', JSON.stringify({ username: creds.username, password: newP }));
+  closeAdminChangePassModal();
+  showToast('✅ Password admin berhasil diubah', 'success');
+}
+
 function hapusSatuNilai(recordId) {
   if (!confirm('Hapus data ini secara permanen? Data juga akan terhapus dari Google Sheets.')) return;
   STATE.history = STATE.history.filter(r => r.recordId !== recordId);
@@ -35,6 +103,7 @@ function hapusSatuNilai(recordId) {
   renderNilaiTable();
   if (STATE.currentPage === 'leaderboard') renderLbTable();
   if (STATE.currentPage === 'dashboard') renderDashboard();
+  if (STATE.currentPage === 'admin') drawAdminDashboard();
 }
 
 function initTheme() {
@@ -55,6 +124,10 @@ function updateThemeBtn(theme) {
 }
 
 function navigate(page) {
+  if (page === 'admin' && !isAdminLoggedIn()) {
+    openAdminLoginModal();
+    return;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const target = document.getElementById(`page-${page}`);
@@ -560,8 +633,7 @@ function renderNilaiTable() {
               <td><span class="score-pill" style="background:${grade.color}20;color:${grade.color};font-weight:800;">${r.score}%</span></td>
               <td><span style="background:${grade.color};color:white;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;">${grade.label}</span></td>
               <td class="no-print" style="display:flex;gap:6px;justify-content:center;">
-                ${r.score>=70?`<button class="btn-row-delete" style="background:rgba(217,119,6,0.1);border-color:rgba(217,119,6,0.3);" onclick="downloadSertifikat('${(r.nama||'-').replace(/'/g,"\\'")}','${r.nim||'-'}','${r.kelas||'-'}','${(r.subjectTitle||'-').replace(/'/g,"\\'")}',${r.score},'${grade.label}','${r.timeStr||'-'}','${r.date}')" title="Download sertifikat">🏅</button>`:''}
-                <button class="btn-row-delete" onclick="hapusSatuNilai('${r.recordId}')" title="Hapus data ini">🗑️</button>
+                ${r.score>=70?`<button class="btn-row-delete" style="background:rgba(217,119,6,0.1);border-color:rgba(217,119,6,0.3);" onclick="downloadSertifikat('${(r.nama||'-').replace(/'/g,"\\'")}','${r.nim||'-'}','${r.kelas||'-'}','${(r.subjectTitle||'-').replace(/'/g,"\\'")}',${r.score},'${grade.label}','${r.timeStr||'-'}','${r.date}')" title="Download sertifikat">🏅</button>`:'<span style="color:var(--text-muted);font-size:11px;">-</span>'}
               </td>
             </tr>`;
           }).join('')}
@@ -1112,6 +1184,7 @@ function clearHistory(){
     renderNilaiPage();
     renderDashboard();
     if (STATE.currentPage === 'leaderboard') renderLbTable();
+    if (STATE.currentPage === 'admin') drawAdminDashboard();
   }
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('open');}
@@ -1204,6 +1277,16 @@ function drawAdminDashboard() {
   const sortedAll = [...all].sort((a,b) => new Date(b.date) - new Date(a.date));
 
   container.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-glass); border:1px solid var(--border-subtle); border-radius:14px; padding:14px 18px; margin-bottom:24px;">
+      <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-secondary);">
+        <span style="font-size:18px;">🔓</span>
+        Login sebagai <strong style="color:var(--text-primary);">${getAdminCreds().username}</strong>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="openAdminChangePassModal()">🔑 Ubah Password</button>
+        <button class="btn btn-ghost btn-sm" onclick="adminLogout()">🚪 Logout</button>
+      </div>
+    </div>
     <div class="stats-grid stagger" style="margin-bottom:24px;">
       <div class="stat-card"><span class="stat-card-icon">👥</span><div class="stat-card-value">${totalPeserta}</div><div class="stat-card-label">Total Peserta Unik</div></div>
       <div class="stat-card"><span class="stat-card-icon">📝</span><div class="stat-card-value">${totalKuis}</div><div class="stat-card-label">Total Pengerjaan Kuis</div></div>
@@ -1259,9 +1342,12 @@ function drawAdminDashboard() {
       </div>
     </div>
 
-    <div class="section-header" style="margin-bottom:14px;">
-      <div class="section-eyebrow">Detail</div>
-      <div class="section-title" style="font-size:16px;">Seluruh Hasil Pengerjaan (${sortedAll.length})</div>
+    <div class="section-header" style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
+      <div>
+        <div class="section-eyebrow">Detail</div>
+        <div class="section-title" style="font-size:16px;">Seluruh Hasil Pengerjaan (${sortedAll.length})</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="clearHistory()">🗑️ Hapus Semua Data</button>
     </div>
     <div class="nilai-table-container">
       <table class="data-table data-table-center">
@@ -1275,6 +1361,7 @@ function drawAdminDashboard() {
             <th>Nilai</th>
             <th>Grade</th>
             <th>Indikasi</th>
+            <th>Aksi</th>
           </tr>
         </thead>
         <tbody>
@@ -1291,6 +1378,7 @@ function drawAdminDashboard() {
               <td><span class="score-pill" style="background:${grade.color}20;color:${grade.color};font-weight:800;">${r.score}%</span></td>
               <td><span style="background:${grade.color};color:white;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;">${grade.label}</span></td>
               <td>${cheat > 0 ? `<span style="color:#EF4444;font-weight:700;font-size:11px;">⚠️ ${cheat}x pindah tab</span>` : `<span style="color:var(--text-muted);font-size:11px;">-</span>`}</td>
+              <td><button class="btn-row-delete" onclick="hapusSatuNilai('${r.recordId}')" title="Hapus data ini">🗑️</button></td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -1307,4 +1395,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(saved.nama){document.querySelectorAll('.user-display-name').forEach(el=>el.textContent=saved.nama);document.querySelectorAll('.user-initial').forEach(el=>el.textContent=saved.nama.charAt(0).toUpperCase());}
   document.getElementById('modal-identitas').addEventListener('click',function(e){if(e.target===this)tutupModalIdentitas();});
   ['id-nama','id-nim','id-kelas'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter')submitIdentitas();});});
+  document.getElementById('modal-admin-login').addEventListener('click',function(e){if(e.target===this)closeAdminLoginModal();});
+  ['admin-login-username','admin-login-password'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter')submitAdminLogin();});});
+  document.getElementById('modal-admin-changepass').addEventListener('click',function(e){if(e.target===this)closeAdminChangePassModal();});
+  ['admin-cp-old','admin-cp-new','admin-cp-new2'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter')submitChangeAdminPassword();});});
 });
