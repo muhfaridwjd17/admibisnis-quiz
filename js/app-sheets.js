@@ -65,6 +65,7 @@ function navigate(page) {
   if (page==='nilai') renderNilaiPage();
   if (page==='leaderboard') renderLeaderboard();
   if (page==='materi') renderMateriPage();
+  if (page==='dosen') renderDosenDashboard();
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebar-overlay').classList.remove('open');
   window.scrollTo(0,0);
@@ -1019,6 +1020,171 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('blur', () => {
   if (STATE.quizActive) handleTabSwitch();
 });
+
+// ==================== DASHBOARD DOSEN (ANALITIK KELAS) ====================
+async function renderDosenDashboard() {
+  updateTopbar('Dashboard Dosen', 'Analitik performa seluruh mahasiswa');
+  const container = document.getElementById('dosen-content');
+  if (!container) return;
+
+  // Isi dropdown filter mata kuliah sekali saja
+  const filterEl = document.getElementById('dosen-subject-filter');
+  if (filterEl && filterEl.options.length <= 1) {
+    Object.entries(SHEETS_CONFIG).forEach(([id, sub]) => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `${sub.icon} ${sub.title}`;
+      filterEl.appendChild(opt);
+    });
+  }
+
+  container.innerHTML = `<div class="empty-state" style="padding:50px;"><div class="empty-state-icon">⏳</div><div class="empty-state-title">Memuat data analitik...</div></div>`;
+  await fetchRemoteHistory();
+  drawDosenDashboard();
+}
+
+function refreshDosenData() {
+  showToast('🔄 Memuat ulang data analitik...', 'info');
+  fetchRemoteHistory(true).then(() => { drawDosenDashboard(); showToast('✅ Data terbaru dimuat', 'success'); });
+}
+
+function drawDosenDashboard() {
+  const container = document.getElementById('dosen-content');
+  if (!container) return;
+
+  const subjectFilter = document.getElementById('dosen-subject-filter')?.value || 'all';
+  const all = mergeHistory().filter(r => subjectFilter === 'all' || r.subjectId === subjectFilter);
+
+  if (all.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="padding:60px;"><div class="empty-state-icon">📭</div><div class="empty-state-title">Belum ada data kuis</div><div class="empty-state-text">Data akan muncul setelah mahasiswa mengerjakan kuis</div></div>`;
+    return;
+  }
+
+  // ---- Statistik ringkas ----
+  const totalPeserta = new Set(all.map(r => r.nim || r.nama)).size;
+  const totalKuis = all.length;
+  const avgScore = Math.round(all.reduce((a, b) => a + b.score, 0) / all.length);
+  const passRate = Math.round((all.filter(r => r.score >= 70).length / all.length) * 100);
+  const cheatCount = all.filter(r => (r.cheatCount || 0) > 0).length;
+
+  // ---- Distribusi grade ----
+  const gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+  all.forEach(r => { gradeCounts[getGrade(r.score).label]++; });
+  const gradeColors = { A: '#10B981', B: '#6366F1', C: '#F59E0B', D: '#F97316', E: '#EF4444' };
+  const maxGradeCount = Math.max(...Object.values(gradeCounts), 1);
+
+  // ---- Rata-rata per mata kuliah ----
+  const bySubject = {};
+  all.forEach(r => {
+    const key = r.subjectId || r.subjectTitle;
+    if (!bySubject[key]) bySubject[key] = { title: r.subjectTitle, scores: [] };
+    bySubject[key].scores.push(r.score);
+  });
+  const subjectAverages = Object.entries(bySubject).map(([id, data]) => ({
+    id, title: data.title,
+    avg: Math.round(data.scores.reduce((a,b)=>a+b,0) / data.scores.length),
+    count: data.scores.length,
+    color: SHEETS_CONFIG[id]?.color || '#6366F1',
+    icon: SHEETS_CONFIG[id]?.icon || '📝'
+  })).sort((a,b) => b.avg - a.avg);
+
+  // ---- Daftar mahasiswa (urut terbaru) ----
+  const sortedAll = [...all].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  container.innerHTML = `
+    <div class="stats-grid stagger" style="margin-bottom:24px;">
+      <div class="stat-card"><span class="stat-card-icon">👥</span><div class="stat-card-value">${totalPeserta}</div><div class="stat-card-label">Total Peserta Unik</div></div>
+      <div class="stat-card"><span class="stat-card-icon">📝</span><div class="stat-card-value">${totalKuis}</div><div class="stat-card-label">Total Pengerjaan Kuis</div></div>
+      <div class="stat-card"><span class="stat-card-icon">📈</span><div class="stat-card-value">${avgScore}%</div><div class="stat-card-label">Rata-rata Nilai Kelas</div></div>
+      <div class="stat-card"><span class="stat-card-icon">✅</span><div class="stat-card-value">${passRate}%</div><div class="stat-card-label">Tingkat Kelulusan</div></div>
+    </div>
+
+    ${cheatCount > 0 ? `
+    <div style="background:rgba(239,68,68,0.08); border:1.5px solid rgba(239,68,68,0.25); border-radius:14px; padding:14px 18px; margin-bottom:24px; display:flex; align-items:center; gap:12px;">
+      <span style="font-size:24px;">⚠️</span>
+      <div><strong style="color:#EF4444;">${cheatCount} pengerjaan</strong> <span style="color:var(--text-secondary);">terdeteksi indikasi kecurangan (pindah tab/jendela saat kuis berlangsung). Lihat detail di tabel di bawah.</span></div>
+    </div>` : ''}
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px;">
+      <div class="card">
+        <div class="card-body">
+          <div class="section-eyebrow" style="margin-bottom:16px;">📊 Distribusi Grade</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            ${Object.entries(gradeCounts).map(([grade, count]) => {
+              const pct = Math.round((count / maxGradeCount) * 100);
+              const pctOfTotal = Math.round((count / all.length) * 100);
+              return `<div style="display:flex; align-items:center; gap:10px;">
+                <span style="width:20px; font-weight:800; color:${gradeColors[grade]};">${grade}</span>
+                <div style="flex:1; height:18px; background:var(--border); border-radius:6px; overflow:hidden;">
+                  <div style="height:100%; width:${pct}%; background:${gradeColors[grade]}; border-radius:6px; transition:width 1s ease; display:flex; align-items:center; justify-content:flex-end; padding-right:6px;">
+                    ${count > 0 ? `<span style="font-size:10px; font-weight:800; color:white;">${count}</span>` : ''}
+                  </div>
+                </div>
+                <span style="width:42px; text-align:right; font-size:11px; color:var(--text-muted);">${pctOfTotal}%</span>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="section-eyebrow" style="margin-bottom:16px;">📚 Rata-rata per Mata Kuliah</div>
+          <div style="display:flex; flex-direction:column; gap:10px; max-height:200px; overflow-y:auto;">
+            ${subjectAverages.map(s => `
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:16px; width:22px; text-align:center;">${s.icon}</span>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:12px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.title}</div>
+                  <div style="height:5px; background:var(--border); border-radius:3px; overflow:hidden;">
+                    <div style="height:100%; width:${s.avg}%; background:${s.color}; border-radius:3px; transition:width 1s ease;"></div>
+                  </div>
+                </div>
+                <span style="font-size:12px; font-weight:800; color:${s.color}; min-width:36px; text-align:right;">${s.avg}%</span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header" style="margin-bottom:14px;">
+      <div class="section-eyebrow">Detail</div>
+      <div class="section-title" style="font-size:16px;">Seluruh Hasil Pengerjaan (${sortedAll.length})</div>
+    </div>
+    <div class="nilai-table-container">
+      <table class="data-table data-table-center">
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th class="col-left">Nama</th>
+            <th>NIM</th>
+            <th>Kelas</th>
+            <th class="col-left">Mata Kuliah</th>
+            <th>Nilai</th>
+            <th>Grade</th>
+            <th>Indikasi</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sortedAll.map(r => {
+            const sub = SHEETS_CONFIG[r.subjectId];
+            const grade = getGrade(r.score);
+            const cheat = r.cheatCount || 0;
+            return `<tr>
+              <td style="font-size:12px;">${new Date(r.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</td>
+              <td class="col-left"><strong>${r.nama||'-'}</strong></td>
+              <td style="font-family:monospace;">${r.nim||'-'}</td>
+              <td>${r.kelas||'-'}</td>
+              <td class="col-left">${sub?`${sub.icon} ${sub.title}`:r.subjectTitle}</td>
+              <td><span class="score-pill" style="background:${grade.color}20;color:${grade.color};font-weight:800;">${r.score}%</span></td>
+              <td><span style="background:${grade.color};color:white;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;">${grade.label}</span></td>
+              <td>${cheat > 0 ? `<span style="color:#EF4444;font-weight:700;font-size:11px;">⚠️ ${cheat}x pindah tab</span>` : `<span style="color:var(--text-muted);font-size:11px;">-</span>`}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
 
 document.addEventListener('DOMContentLoaded',()=>{
   initTheme();
