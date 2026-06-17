@@ -1038,3 +1038,9 @@ body {
 @media print {
   .no-print { display: none !important; }
 }
+
+/* ==================== TOMBOL REFRESH DATA ==================== */
+.btn-filter-clear[title*="Muat ulang"] {
+  font-size: 14px;
+  padding: 9px 12px;
+}
