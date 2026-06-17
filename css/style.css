@@ -776,18 +776,122 @@ body {
 .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99; backdrop-filter:blur(4px); }
 
 @media (max-width:768px) {
-  .sidebar { transform: translateX(-100%); }
+  /* ---- Sidebar & navigasi ---- */
+  .sidebar { transform: translateX(-100%); z-index: 200; }
   .sidebar.open { transform: translateX(0); }
   .sidebar-overlay.open { display: block; }
   .mobile-toggle { display: flex; }
   .main-content { margin-left: 0; }
-  .hero-section { padding: 28px 20px; }
-  .hero-heading { font-size: 26px; }
-  .section { padding: 24px 20px; }
-  .quiz-container { padding: 20px; }
-  .stats-grid { grid-template-columns: 1fr 1fr; }
-  .lb-header, .lb-row { grid-template-columns: 40px 1fr 80px; }
-  .lb-col-subject { display: none; }
+
+  /* ---- Topbar ---- */
+  .topbar { padding: 12px 16px 12px 58px; flex-wrap: wrap; gap: 8px; }
+  .topbar-title { font-size: 14px; }
+  .topbar-sub { font-size: 10px; }
+  .topbar-actions { gap: 6px; }
+  .btn-icon { width: 30px; height: 30px; font-size: 13px; }
+
+  /* ---- Hero ---- */
+  .hero-section { padding: 24px 16px 32px; }
+  .hero-tag { font-size: 9px; padding: 4px 10px; }
+  .hero-heading { font-size: 22px; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 13px; }
+  .hero-actions { flex-direction: column; }
+  .hero-actions .btn { width: 100%; justify-content: center; }
+  .hero-stats { gap: 16px; flex-wrap: wrap; margin-top: 28px; padding-top: 20px; }
+  .stat-value { font-size: 20px; }
+
+  /* ---- Section umum ---- */
+  .section { padding: 20px 16px; }
+  .section-title { font-size: 18px; }
+
+  /* ---- Stat cards & subject cards ---- */
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { padding: 16px; }
+  .stat-card-icon { font-size: 20px; margin-bottom: 8px; }
+  .stat-card-value { font-size: 22px; }
+  .subjects-grid { grid-template-columns: 1fr; gap: 12px; }
+  .materi-grid { grid-template-columns: 1fr; gap: 14px; }
+
+  /* ---- Leaderboard widget (dashboard) ---- */
+  .lb-header, .lb-row { grid-template-columns: 36px 1fr 70px; padding: 10px 12px; gap: 6px; }
+  .lb-header > div:nth-child(3), .lb-header > div:nth-child(4),
+  .lb-row > div:nth-child(3), .lb-row > div:nth-child(4) { display: none; }
+  .lb-name { font-size: 12px; }
+  .lb-sub { font-size: 9px; }
+
+  /* ---- Filter bar: stack vertikal penuh ---- */
+  .filter-bar-wrap { padding: 14px 14px; gap: 12px; }
+  .filter-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .filter-group { width: 100%; }
+  .filter-select { min-width: 0; width: 100%; }
+  .filter-group > div { flex-direction: column; gap: 8px; }
+  .filter-input { min-width: 0; width: 100%; }
+  .btn-filter, .btn-filter-clear { flex: 1; justify-content: center; }
+  .export-row { flex-wrap: wrap; }
+  .btn-export { flex: 1; min-width: 90px; text-align: center; justify-content: center; }
+
+  /* ---- Tabel data: scroll horizontal dengan indikator ---- */
+  .nilai-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table { font-size: 11px; min-width: 640px; }
+  .data-table th, .data-table td { padding: 8px 8px; }
+  .result-count-text { font-size: 11px; flex-wrap: wrap; }
+
+  /* ---- Quiz ---- */
+  .quiz-container { padding: 16px; }
+  .quiz-progress-wrap { flex-wrap: wrap; gap: 8px; }
+  .question-card { padding: 20px 16px; }
+  .question-text { font-size: 15px; }
+  .option-btn { padding: 12px 14px; font-size: 12px; }
+  .quiz-actions { flex-direction: column-reverse; gap: 10px; align-items: stretch; }
+  .quiz-actions > div { margin-left: 0 !important; flex-direction: column; width: 100%; }
+  .quiz-actions .btn { width: 100%; justify-content: center; }
+  #btn-prev { width: 100%; justify-content: center; }
+
+  /* ---- Result page ---- */
+  .result-card-v2 { padding: 32px 18px; max-width: 100%; }
+  .result-ring-wrap { width: 140px; height: 140px; }
+  .result-ring-wrap svg { width: 140px; height: 140px; }
+  .result-score-big { font-size: 32px; }
+  .result-main-title { font-size: 19px; }
+  .result-main-sub { font-size: 12px; }
+  .result-identity-bar { flex-direction: column; gap: 6px; padding: 12px; }
+  .result-identity-bar span[style*="color:var(--border-glass)"] { display: none; }
+  .result-stats-v2 { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .result-stat-v2 { padding: 12px 6px; }
+  .result-stat-icon { font-size: 18px; }
+  .result-stat-num { font-size: 20px; }
+  .result-stat-lbl { font-size: 9px; }
+  .result-actions { flex-direction: column; }
+  .result-actions .btn { width: 100%; justify-content: center; }
+
+  /* ---- Materi ---- */
+  .materi-card-header { padding: 14px 16px; }
+  .materi-card-body { padding: 16px; }
+
+  /* ---- Modal identitas ---- */
+  #modal-identitas > div { padding: 28px 20px; width: 92%; }
+
+  /* ---- Empty state ---- */
+  .empty-state { padding: 36px 18px !important; }
+  .empty-state-icon { font-size: 32px; }
+  .empty-state-title { font-size: 14px; }
+  .empty-state-text { font-size: 12px; }
+
+  /* ---- Subject card di tab Kuis ---- */
+  .subject-card { padding: 18px; }
+  .subject-icon-wrap { width: 44px; height: 44px; font-size: 20px; }
+
+  /* ---- Toast ---- */
+  .toast-container { left: 12px; right: 12px; bottom: 16px; }
+  .toast { font-size: 11px; padding: 10px 14px; }
+}
+
+@media (max-width:420px) {
+  .hero-heading { font-size: 19px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .result-stats-v2 { grid-template-columns: 1fr; }
+  .result-ring-wrap { width: 120px; height: 120px; }
+  .result-ring-wrap svg { width: 120px; height: 120px; }
 }
 
 /* ==================== ANIMATIONS ==================== */
